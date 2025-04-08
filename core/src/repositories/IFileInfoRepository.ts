@@ -1,0 +1,11 @@
+import FileInfo from "../entities/FileInfo";
+
+export default interface IFileInfoRepository {
+  add(fileInfo: FileInfo): Promise<FileInfo>;
+  get(id: string): Promise<FileInfo>;
+  delete(id: string): Promise<FileInfo>;
+  getAll(): Promise<FileInfo[]>;
+  update(fileInfo: FileInfo): Promise<FileInfo>;
+  getPathname(id: string): Promise<string>;
+  exists(id: string): Promise<boolean>;
+}

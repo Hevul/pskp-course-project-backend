@@ -1,0 +1,13 @@
+/.VSCodeCounter/
+/.vscode/
+
+*/lib/
+*/node_modules/
+*/*.tsbuildinfo
+test/coverage/
+
+temp/
+uploads/
+sandbox/
+
+web/.env

@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "target": "es6",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "typeRoots": ["../web/src/types", "./node_modules/@types"]
+  },
+  "include": ["src/**/*", "jest.setup.ts"],
+  "exclude": ["node_modules", "dist"],
+  "references": [
+    { "path": "../application" },
+    { "path": "../core" },
+    { "path": "../infrastructure" },
+    { "path": "../web" }
+  ]
+}
