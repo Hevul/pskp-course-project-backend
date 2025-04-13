@@ -11,7 +11,7 @@ import createLinkRouter from "./routers/linkRouter";
 import box from "./box";
 import UserController from "./controllers/UserController";
 import extendResponse from "./middlewares/utils/extendResponse";
-import FileController from "./controllers/FileController";
+import { FileController } from "./controllers/FileController";
 import UserStorageController from "./controllers/UserStorageController";
 import authenticate from "./middlewares/utils/authenticate";
 import health from "./middlewares/utils/health";

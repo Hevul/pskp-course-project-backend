@@ -1,7 +1,7 @@
 import config from "./config";
 import DirService from "../../application/src/services/DirService";
-import FileLinkService from "../../application/src/services/FileLinkService";
-import FileService from "../../application/src/services/FileService";
+import { FileLinkService } from "../../application/src/services/FileLinkService";
+import { FileService } from "../../application/src/services/FileService";
 import UserService from "../../application/src/services/UserService";
 import UserStorageService from "../../application/src/services/UserStorageService";
 import JwtProvider from "../../infrastructure/src/providers/JwtProvider";

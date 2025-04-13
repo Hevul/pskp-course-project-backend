@@ -11,9 +11,10 @@ const createRouter = (
 
   router
     .get("/get/:id", authenticate, validateRequest, fileLinkController.get)
+    .get("/get-all-by-owner", authenticate, fileLinkController.getAllByOwner)
     .get(
       "/get-by-link/:link",
-      authenticate,
+      // authenticate, // ! BUG
       validateRequest,
       fileLinkController.getByLink
     )

@@ -4,12 +4,10 @@ import IDirInfoRepository from "../../../core/src/repositories/IDirInfoRepositor
 import IFileRepository from "../../../core/src/repositories/IFileRepository";
 import FileInfo from "../../../core/src/entities/FileInfo";
 import MoveCollisionError from "../errors/MoveCollisionError";
-import { createWriteStream } from "fs";
 import { Readable } from "stream";
-import { pipeline } from "stream/promises";
 import RenameCollisionError from "../errors/RenameCollisionError";
 
-class FileService implements IFileService {
+export class FileService implements IFileService {
   constructor(
     private readonly _fileInfoRepository: IFileInfoRepository,
     private readonly _fileRepository: IFileRepository,
@@ -263,5 +261,3 @@ class FileService implements IFileService {
     return file;
   }
 }
-
-export default FileService;

@@ -9,6 +9,18 @@ class FileLinkController {
     private readonly _userService: IUserService
   ) {}
 
+  getAllByOwner = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    const user = req.user!;
+
+    const links = await this._fileLinkService.getAllByOwnerId(user.id);
+
+    res.json(links);
+  };
+
   getByLink = async (
     req: Request,
     res: Response,

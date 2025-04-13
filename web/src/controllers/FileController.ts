@@ -4,14 +4,24 @@ import IFileService from "../../../application/src/interfaces/IFileService";
 import config from "../config";
 import IFileLinkService from "../../../application/src/interfaces/IFileLinkService";
 import fs, { createReadStream } from "fs";
-import path from "path";
-import { pipeline } from "stream/promises";
 
-class FileController {
+export class FileController {
   constructor(
     private readonly _fileService: IFileService,
     private readonly _fileLinkService: IFileLinkService
   ) {}
+
+  get = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    const id = req.params.id;
+
+    const file = await this._fileService.get(id);
+
+    res.json(file);
+  };
 
   getAllByStorageId = async (
     req: Request,
@@ -201,5 +211,3 @@ class FileController {
     res.good({ message: "File is renamed" });
   };
 }
-
-export default FileController;

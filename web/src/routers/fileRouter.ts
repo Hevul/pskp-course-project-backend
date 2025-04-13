@@ -1,12 +1,13 @@
 import express, { RequestHandler } from "express";
 import multer from "multer";
-import FileController from "../controllers/FileController";
+import { FileController } from "../controllers/FileController";
 import validateFile from "../middlewares/validators/requireFile";
 import { body, param } from "express-validator";
 import validateRequest from "../middlewares/validators/validateRequest";
 import fileInfoErrorHandler from "../errorHandlers/handlers/fileInfoErrorHandler";
 import { uploadCleanup } from "../middlewares/utils/uploadCleanup";
 import { uploadLarge } from "../utils/multerConfig";
+import { container } from "../container";
 
 const uploadSmall = multer({
   storage: multer.memoryStorage(),
@@ -22,6 +23,7 @@ const createRouter = (
   const router = express.Router();
 
   router
+    .get("/id", fileController.get) //! BUG
     .get(
       "/get-all-by-storage/:storageId/:parentId?",
       authenticate,

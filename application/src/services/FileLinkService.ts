@@ -8,7 +8,7 @@ import LinkAlreadyExistsError from "../errors/LinkAlreadyExists";
 import IFileLinkService from "../interfaces/IFileLinkService";
 import IHashProvider from "../interfaces/IHashProvider";
 
-class FileLinkService implements IFileLinkService {
+export class FileLinkService implements IFileLinkService {
   constructor(
     private readonly _fileLinkRepository: IFileLinkRepository,
     private readonly _fileInfoRepository: IFileInfoRepository,
@@ -135,5 +135,3 @@ class FileLinkService implements IFileLinkService {
     return await this.generate(ownerId, fileInfoId, friends, isPublic);
   }
 }
-
-export default FileLinkService;
