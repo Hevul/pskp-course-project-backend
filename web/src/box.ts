@@ -15,6 +15,19 @@ import UserRepository from "../../infrastructure/src/data/db/user/UserRepository
 import UserStorageRepository from "../../infrastructure/src/data/db/userStorage/UserStorageRepository";
 import BlackRepository from "../../infrastructure/src/data/db/black/BlackRepository";
 import AuthService from "../../application/src/services/AuthService";
+import authenticate from "./middlewares/utils/authenticate";
+import UserController from "./controllers/UserController";
+import AuthController from "./controllers/AuthController";
+import DirController from "./controllers/DirController";
+import { FileController } from "./controllers/FileController";
+import FileLinkController from "./controllers/FileLinkController";
+import UserStorageController from "./controllers/UserStorageController";
+import createUserRouter from "./routers/userRouter";
+import creteFileRouter from "./routers/fileRouter";
+import createStorageRouter from "./routers/userStorageRouter";
+import createAuthRouter from "./routers/authRouter";
+import createDirRouter from "./routers/dirRouter";
+import createLinkRouter from "./routers/linkRouter";
 
 const dirInfoRepository = new DirInfoRepository();
 const dirRepository = new DirRepository(config.uploadDir);
@@ -54,6 +67,33 @@ const authService = new AuthService(
   hashProvider
 );
 
+const createAuthenticate = () => authenticate(jwtProvider, userService);
+
+const userRouter = createUserRouter(
+  new UserController(userService),
+  createAuthenticate()
+);
+const fileRouter = creteFileRouter(
+  createAuthenticate(),
+  new FileController(fileService, fileLinkService)
+);
+const dirRouter = createDirRouter(
+  createAuthenticate(),
+  new DirController(dirService)
+);
+const storageRouter = createStorageRouter(
+  new UserStorageController(userStorageService),
+  createAuthenticate()
+);
+const authRouter = createAuthRouter(
+  new AuthController(authService, jwtProvider),
+  createAuthenticate()
+);
+const linkRouter = createLinkRouter(
+  new FileLinkController(fileLinkService, userService),
+  createAuthenticate()
+);
+
 const box = {
   dirService,
   fileLinkService,
@@ -62,6 +102,12 @@ const box = {
   userStorageService,
   jwtProvider,
   authService,
+  userRouter,
+  fileRouter,
+  dirRouter,
+  storageRouter,
+  authRouter,
+  linkRouter,
 };
 
 export default box;

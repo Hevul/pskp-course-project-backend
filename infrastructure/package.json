@@ -12,8 +12,10 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "inversify": "^7.0.0-alpha.5",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.9.2"
+    "mongoose": "^8.9.2",
+    "reflect-metadata": "^0.2.2"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.7",

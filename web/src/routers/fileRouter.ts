@@ -7,7 +7,6 @@ import validateRequest from "../middlewares/validators/validateRequest";
 import fileInfoErrorHandler from "../errorHandlers/handlers/fileInfoErrorHandler";
 import { uploadCleanup } from "../middlewares/utils/uploadCleanup";
 import { uploadLarge } from "../utils/multerConfig";
-import { container } from "../container";
 
 const uploadSmall = multer({
   storage: multer.memoryStorage(),
