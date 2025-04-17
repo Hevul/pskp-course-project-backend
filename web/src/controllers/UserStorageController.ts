@@ -18,6 +18,20 @@ class UserStorageController {
     res.json(storages);
   };
 
+  getFullInfo = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    const id = req.params.id;
+
+    const storageInfo = await this._userStorageService.getFullInfo(id);
+
+    res.status(200).json({
+      ...storageInfo,
+    });
+  };
+
   create = async (
     req: Request,
     res: Response,

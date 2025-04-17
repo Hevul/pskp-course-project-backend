@@ -6,7 +6,6 @@ const errorConfigs: ErrorConfig[] = [
   {
     errorName: UserAlreadyRegisteredError.name,
     errorDetails: {
-      value: "",
       msg: "Пользователь с таким логином уже зарегистрирован! Придумайте другой логин.",
       path: "login",
     },

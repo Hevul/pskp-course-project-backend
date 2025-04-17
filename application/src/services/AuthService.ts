@@ -15,7 +15,7 @@ class AuthService implements IAuthService {
   ) {}
 
   async login(login: string, password: string): Promise<string> {
-    const exists = await this._userRepository.exists(login);
+    const exists = await this._userRepository.existsByLogin(login);
 
     if (!exists) throw new InvalidLoginError();
 

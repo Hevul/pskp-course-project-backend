@@ -7,12 +7,51 @@ import DirectoryMoveInChildError from "../errors/DirectoryMoveInChildError";
 import DirectoryMoveInItSelfError from "../errors/DirectoryMoveInItSelfError";
 import MoveCollisionError from "../errors/MoveCollisionError";
 import CopyCollisionError from "../errors/CopyCollisionError";
+import { DirInfoFullInfoDTO } from "../dtos/DirInfoFullInfoDTO";
 
 class DirService implements IDirService {
   constructor(
     private readonly _dirRepository: IDirRepository,
     private readonly _dirInfoRepository: IDirInfoRepository
   ) {}
+
+  async getFullInfo(id: string): Promise<DirInfoFullInfoDTO> {
+    const dirInfo = await this._dirInfoRepository.get(id);
+
+    const currentDirSize = await this._dirInfoRepository.getSize(id);
+
+    const fileCount = dirInfo.files.length;
+    const dirCount = dirInfo.subdirectories.length;
+
+    const subdirsInfo = await Promise.all(
+      dirInfo.subdirectories.map((subdirId) =>
+        this._dirInfoRepository.get(subdirId)
+      )
+    );
+
+    const totalFileCount = subdirsInfo.reduce(
+      (sum, info) => sum + info.files.length,
+      fileCount
+    );
+
+    const totalDirCount = subdirsInfo.reduce(
+      (sum, info) => sum + info.subdirectories.length,
+      dirCount
+    );
+
+    const path = await this._dirInfoRepository.getPath(id);
+
+    const cleanPath = path.replace(/^\/[a-f0-9]+/, "");
+
+    return {
+      name: dirInfo.name,
+      createAt: dirInfo.uploadAt,
+      fileCount: totalFileCount,
+      dirCount: totalDirCount,
+      size: currentDirSize,
+      path: cleanPath,
+    };
+  }
 
   async getAllByStorageId(storageId: string): Promise<DirInfo[]> {
     const dirInfos = await this._dirInfoRepository.getAll();

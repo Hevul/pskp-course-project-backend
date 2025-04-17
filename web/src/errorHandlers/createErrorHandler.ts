@@ -12,7 +12,8 @@ function createErrorHandler(errorConfigs: ErrorConfig[]) {
 
     if (errorConfig) errors = [errorConfig.errorDetails];
 
-    if (errors) res.status(400).json({ errors });
+    if (errors)
+      res.status(errorConfig!.errorDetails.status ?? 400).json({ errors });
     else next(err);
   };
 }

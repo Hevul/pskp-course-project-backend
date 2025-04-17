@@ -1,3 +1,6 @@
+import CannotAddSelfAsFriendError from "../errors/CannotAddSelfAsFriendError";
+import FriendAlreadyAddedError from "../errors/FriendAlreadyAddedError";
+
 class FileLink {
   constructor(
     public link: string,
@@ -13,7 +16,10 @@ class FileLink {
   }
 
   addFriend(id: string) {
+    if (id === this.ownerId) throw new CannotAddSelfAsFriendError();
+
     if (!this.friends.includes(id)) this.friends.push(id);
+    else throw new FriendAlreadyAddedError();
   }
 
   removeFriend(id: string) {

@@ -74,8 +74,8 @@ export class FileLinkService implements IFileLinkService {
     return link;
   }
 
-  async addFriend(id: string, userId: string): Promise<FileLink> {
-    const user = await this._userRepository.getById(userId);
+  async addFriend(id: string, friendName: string): Promise<FileLink> {
+    const user = await this._userRepository.getByLogin(friendName);
 
     let link = await this._fileLinkRepository.get(id);
 

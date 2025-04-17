@@ -6,12 +6,14 @@ import FileInfo from "../../../core/src/entities/FileInfo";
 import MoveCollisionError from "../errors/MoveCollisionError";
 import { Readable } from "stream";
 import RenameCollisionError from "../errors/RenameCollisionError";
+import IFileLinkRepository from "../../../core/src/repositories/IFileLinkRepository";
 
 export class FileService implements IFileService {
   constructor(
     private readonly _fileInfoRepository: IFileInfoRepository,
     private readonly _fileRepository: IFileRepository,
-    private readonly _dirInfoRepository: IDirInfoRepository
+    private readonly _dirInfoRepository: IDirInfoRepository,
+    private readonly _fileLinkRepository: IFileLinkRepository
   ) {}
 
   async getAllByStorageId(id: string): Promise<FileInfo[]> {
@@ -188,6 +190,7 @@ export class FileService implements IFileService {
     const pathname = await this._fileInfoRepository.getPathname(id);
 
     const fileInfo = await this._fileInfoRepository.delete(id);
+    await this._fileLinkRepository.deleteByFileInfoId(id);
 
     if (fileInfo.parent) {
       const dirInfo = await this._dirInfoRepository.get(fileInfo.parent);

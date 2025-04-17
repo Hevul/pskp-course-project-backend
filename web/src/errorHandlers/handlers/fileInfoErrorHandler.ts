@@ -16,7 +16,6 @@ const nameValidation: ErrorConfig[] = [
   {
     errorName: EmptyFileNameError.name,
     errorDetails: {
-      value: "",
       msg: "Имя файла не может быть пустым!",
       path: "name",
     },
@@ -24,7 +23,6 @@ const nameValidation: ErrorConfig[] = [
   {
     errorName: NameTooLongError.name,
     errorDetails: {
-      value: "",
       msg: "Имя файла не может превышать 255 символов!",
       path: "name",
     },
@@ -32,7 +30,6 @@ const nameValidation: ErrorConfig[] = [
   {
     errorName: ForbiddenCharactersError.name,
     errorDetails: {
-      value: "",
       msg: "Имя содержит запрещённые символы!",
       path: "name",
     },
@@ -40,7 +37,6 @@ const nameValidation: ErrorConfig[] = [
   {
     errorName: ReservedNameError.name,
     errorDetails: {
-      value: "",
       msg: "Введённое имя является зарезервированным именем!",
       path: "name",
     },
@@ -48,7 +44,6 @@ const nameValidation: ErrorConfig[] = [
   {
     errorName: NonPrintableCharactersError.name,
     errorDetails: {
-      value: "",
       msg: "Имя содержит непечатаемые символы!",
       path: "name",
     },
@@ -56,7 +51,6 @@ const nameValidation: ErrorConfig[] = [
   {
     errorName: LeadingTrailingSpacesError.name,
     errorDetails: {
-      value: "",
       msg: "Имя не должно начинаться или заканчиваться пробелами!",
       path: "name",
     },
@@ -67,7 +61,6 @@ const operations: ErrorConfig[] = [
   {
     errorName: MoveCollisionError.name,
     errorDetails: {
-      value: "",
       msg: "Файл с таким же именем уже существует в выбранной папке!",
       path: "",
     },
@@ -75,7 +68,6 @@ const operations: ErrorConfig[] = [
   {
     errorName: RenameCollisionError.name,
     errorDetails: {
-      value: "",
       msg: "Файл с таким же именем уже существует в выбранной папке!",
       path: "",
     },
@@ -83,7 +75,6 @@ const operations: ErrorConfig[] = [
   {
     errorName: CopyCollisionError.name,
     errorDetails: {
-      value: "",
       msg: "Файл с таким же именем уже существует в выбранной папке!",
       path: "",
     },
@@ -91,7 +82,6 @@ const operations: ErrorConfig[] = [
   {
     errorName: FileInfoAlreadyExistsError.name,
     errorDetails: {
-      value: "",
       msg: "Файл с таким же именем уже существует в текущей папке!",
       path: "upload",
     },

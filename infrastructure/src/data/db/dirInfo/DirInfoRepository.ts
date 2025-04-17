@@ -25,7 +25,7 @@ class DirInfoRepository implements IDirInfoRepository {
     for (const file of dirInfoDb.files) totalSize += file.size;
 
     for (const subDir of dirInfoDb.subdirectories)
-      totalSize += await this.getSize(subDir.toString());
+      totalSize += await this.getSize(subDir._id.toString());
 
     return totalSize;
   }

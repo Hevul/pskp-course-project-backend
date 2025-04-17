@@ -5,6 +5,18 @@ import IDirService from "../../../application/src/interfaces/IDirService";
 class DirController {
   constructor(private readonly _dirService: IDirService) {}
 
+  getFullInfo = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    const id = req.params.id;
+
+    const fullInfo = await this._dirService.getFullInfo(id);
+
+    res.json({ ...fullInfo });
+  };
+
   getAllByStorageId = async (
     req: Request,
     res: Response,

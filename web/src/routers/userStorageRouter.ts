@@ -3,25 +3,70 @@ import UserStorageController from "../controllers/UserStorageController";
 import validateRequest from "../middlewares/validators/validateRequest";
 import { body, param } from "express-validator";
 import userStorageErrorHandler from "../errorHandlers/handlers/userStorageErrorHandler";
+import { createAuthorizeMiddlewareFactory } from "../middlewares/utils/createAuthorizeMiddlewareFactory";
 
 const createRouter = (
-  controller: UserStorageController,
-  authenticate: RequestHandler
+  authenticate: RequestHandler,
+  authorize: ReturnType<typeof createAuthorizeMiddlewareFactory>,
+  controller: UserStorageController
 ) => {
   const router = express.Router();
 
   router
-    .get("/get/:id", getChain(), validateRequest, controller.get)
+    .get(
+      "/get/:id",
+      authenticate,
+      authorize({
+        entityTypes: { id: "storage" },
+        idLocations: ["params"],
+        idFields: ["id"],
+      }),
+      getChain(),
+      validateRequest,
+      controller.get
+    )
+    .get(
+      "/get-full-info/:id",
+      authenticate,
+      authorize({
+        entityTypes: { id: "storage" },
+        idLocations: ["params"],
+        idFields: ["id"],
+      }),
+      controller.getFullInfo
+    )
     .get("/get-all", authenticate, validateRequest, controller.getAllByUser)
     .post(
       "/create",
+      authenticate,
       createChain(),
       validateRequest,
-      authenticate,
       controller.create
     )
-    .patch("/rename", renameChain(), validateRequest, controller.rename)
-    .delete("/delete", deleteChain(), validateRequest, controller.delete);
+    .patch(
+      "/rename",
+      authenticate,
+      authorize({
+        entityTypes: { id: "storage" },
+        idLocations: ["body"],
+        idFields: ["id"],
+      }),
+      renameChain(),
+      validateRequest,
+      controller.rename
+    )
+    .delete(
+      "/delete",
+      authenticate,
+      authorize({
+        entityTypes: { id: "storage" },
+        idLocations: ["body"],
+        idFields: ["id"],
+      }),
+      deleteChain(),
+      validateRequest,
+      controller.delete
+    );
 
   router.use(userStorageErrorHandler);
 

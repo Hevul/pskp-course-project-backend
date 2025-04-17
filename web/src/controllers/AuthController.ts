@@ -48,7 +48,7 @@ class AuthController {
       secure: false,
       sameSite: "lax",
       path: "/",
-      maxAge: 3600000,
+      maxAge: 3600000 * 8,
     });
 
     res.json({ data: token });

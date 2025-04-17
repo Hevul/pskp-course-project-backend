@@ -1,33 +1,53 @@
-import express from "express";
+import express, { RequestHandler } from "express";
 import FileLinkController from "../controllers/FileLinkController";
 import { body, param } from "express-validator";
 import validateRequest from "../middlewares/validators/validateRequest";
+import { createAuthorizeMiddlewareFactory } from "../middlewares/utils/createAuthorizeMiddlewareFactory";
+import linkErrorHandler from "../errorHandlers/handlers/linkErrorHandler";
 
 const createRouter = (
-  fileLinkController: FileLinkController,
-  authenticate: any
+  authenticate: RequestHandler,
+  authorize: ReturnType<typeof createAuthorizeMiddlewareFactory>,
+  fileLinkController: FileLinkController
 ) => {
   const router = express.Router();
 
   router
-    .get("/get/:id", authenticate, validateRequest, fileLinkController.get)
+    .get(
+      "/get/:id",
+      authenticate,
+      authorize({
+        entityTypes: {
+          id: "link",
+        },
+        idLocations: ["params"],
+        idFields: ["id"],
+      }),
+      validateRequest,
+      fileLinkController.get
+    )
+    .get(
+      "/get-by-fileinfo-id/:id",
+      authenticate,
+      authorize({
+        entityTypes: { id: "file" },
+        idLocations: ["params"],
+        idFields: ["id"],
+      }),
+      fileLinkController.getByFileInfoId
+    )
     .get("/get-all-by-owner", authenticate, fileLinkController.getAllByOwner)
     .get(
       "/get-by-link/:link",
-      // authenticate, // ! BUG
+      authenticate,
+      // ОЁЙ
       validateRequest,
       fileLinkController.getByLink
-    )
-    .post(
-      "/get-or-generate",
-      authenticate,
-      generateChain(),
-      validateRequest,
-      fileLinkController.getOrGenerate
     )
     .get(
       "/download/:link",
       authenticate,
+      // БЕДА
       downloadChain(),
       validateRequest,
       fileLinkController.download
@@ -35,13 +55,37 @@ const createRouter = (
     .patch(
       "/add-friend",
       authenticate,
+      authorize({
+        entityTypes: {
+          id: "link",
+        },
+        idLocations: ["body"],
+        idFields: ["id"],
+      }),
       addFriendChain(),
       validateRequest,
       fileLinkController.addFriend
     )
+    .post(
+      "/create",
+      authenticate,
+      authorize({
+        entityTypes: { id: "file" },
+        idLocations: ["body"],
+        idFields: ["id"],
+      }),
+      fileLinkController.create
+    )
     .patch(
       "/remove-friend",
       authenticate,
+      authorize({
+        entityTypes: {
+          id: "link",
+        },
+        idLocations: ["body"],
+        idFields: ["id"],
+      }),
       removeFriendChain(),
       validateRequest,
       fileLinkController.removeFriend
@@ -49,23 +93,46 @@ const createRouter = (
     .patch(
       "/remove-all-friends/:id",
       authenticate,
-      validateRequest,
+      authorize({
+        entityTypes: {
+          id: "link",
+        },
+        idLocations: ["params"],
+        idFields: ["id"],
+      }),
       fileLinkController.removeAllFriends
     )
     .patch(
       "/set-publicity",
       authenticate,
+      authorize({
+        entityTypes: {
+          id: "link",
+        },
+        idLocations: ["body"],
+        idFields: ["id"],
+      }),
       setPublicityChain(),
       validateRequest,
       fileLinkController.setPublicity
     )
     .delete(
       "/delete",
+      authenticate,
+      authorize({
+        entityTypes: {
+          id: "link",
+        },
+        idLocations: ["body"],
+        idFields: ["id"],
+      }),
       validateRequest,
       deleteChain(),
       validateRequest,
       fileLinkController.delete
     );
+
+  router.use(linkErrorHandler);
 
   return router;
 };

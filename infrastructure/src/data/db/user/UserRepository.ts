@@ -5,6 +5,14 @@ import User from "../../../../../core/src/entities/User";
 import IUserRepository from "../../../../../core/src/repositories/IUserRepository";
 
 class UserRepository implements IUserRepository {
+  async exists(id: string): Promise<boolean> {
+    try {
+      return (await UserDb.exists({ _id: id })) !== null;
+    } catch {
+      return false;
+    }
+  }
+
   async getAll(): Promise<User[]> {
     try {
       const usersDb = await UserDb.find({}).lean();
@@ -42,7 +50,7 @@ class UserRepository implements IUserRepository {
     }
   }
 
-  async exists(login: string): Promise<boolean> {
+  async existsByLogin(login: string): Promise<boolean> {
     try {
       return (await UserDb.exists({ login })) !== null;
     } catch {

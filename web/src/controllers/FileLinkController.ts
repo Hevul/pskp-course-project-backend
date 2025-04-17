@@ -45,22 +45,29 @@ class FileLinkController {
     res.status(200).json({ link, ok: true });
   };
 
-  getOrGenerate = async (
+  getByFileInfoId = async (
     req: Request,
     res: Response,
     next: NextFunction
   ): Promise<void> => {
-    const { fileId } = req.body;
+    const id = req.params.id;
+
+    const link = await this._fileLinkService.getByFileInfoId(id);
+
+    res.status(200).json({ link });
+  };
+
+  create = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    const id = req.body.id;
     const user = req.user!;
 
-    const link = await this._fileLinkService.getOrGenerate(
-      user.id,
-      fileId,
-      [],
-      true
-    );
+    const link = await this._fileLinkService.generate(user.id, id, [], true);
 
-    res.status(200).json({ link, ok: true });
+    res.status(200).json({ link });
   };
 
   download = async (
@@ -91,8 +98,7 @@ class FileLinkController {
     const id = req.body.id;
     const friendName = req.body.friendName;
 
-    const friend = await this._userService.getByLogin(friendName);
-    const link = await this._fileLinkService.addFriend(id, friend.id);
+    const link = await this._fileLinkService.addFriend(id, friendName);
 
     res.status(200).json({ link, ok: true });
   };

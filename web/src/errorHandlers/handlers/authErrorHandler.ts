@@ -7,7 +7,6 @@ const errorConfigs: ErrorConfig[] = [
   {
     errorName: InvalidLoginError.name,
     errorDetails: {
-      value: "",
       msg: "Неверный логин! Пожалуйста, попробуйте ещё раз.",
       path: "login",
     },
@@ -15,7 +14,6 @@ const errorConfigs: ErrorConfig[] = [
   {
     errorName: InvalidPasswordError.name,
     errorDetails: {
-      value: "",
       msg: "Неверный пароль! Пожалуйста, попробуйте ещё раз.",
       path: "password",
     },

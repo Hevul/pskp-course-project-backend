@@ -7,6 +7,7 @@ import validateRequest from "../middlewares/validators/validateRequest";
 import fileInfoErrorHandler from "../errorHandlers/handlers/fileInfoErrorHandler";
 import { uploadCleanup } from "../middlewares/utils/uploadCleanup";
 import { uploadLarge } from "../utils/multerConfig";
+import { createAuthorizeMiddlewareFactory } from "../middlewares/utils/createAuthorizeMiddlewareFactory";
 
 const uploadSmall = multer({
   storage: multer.memoryStorage(),
@@ -17,23 +18,51 @@ const uploadSmall = multer({
 
 const createRouter = (
   authenticate: RequestHandler,
+  authorize: ReturnType<typeof createAuthorizeMiddlewareFactory>,
   fileController: FileController
 ) => {
   const router = express.Router();
 
   router
-    .get("/id", fileController.get) //! BUG
+    .get(
+      "/get/:id",
+      authenticate,
+      authorize({
+        entityTypes: {
+          id: "file",
+        },
+        idLocations: ["params"],
+        idFields: ["id"],
+      }),
+      getChain(),
+      validateRequest,
+      fileController.get
+    )
     .get(
       "/get-all-by-storage/:storageId/:parentId?",
       authenticate,
+      authorize({
+        entityTypes: {
+          storageId: "storage",
+        },
+        idLocations: ["params"],
+        idFields: ["storageId"],
+      }),
       getFilesChain(),
       validateRequest,
       fileController.getAllByStorageId
     )
     .post(
       "/upload",
-      authenticate,
       uploadSmall.single("file"),
+      authenticate,
+      authorize({
+        entityTypes: {
+          storageId: "storage",
+        },
+        idLocations: ["body"],
+        idFields: ["storageId"],
+      }),
       validateFile,
       uploadChain(),
       validateRequest,
@@ -41,8 +70,15 @@ const createRouter = (
     )
     .post(
       "/upload-large",
-      authenticate,
       uploadLarge.single("file"),
+      authenticate,
+      authorize({
+        entityTypes: {
+          storageId: "storage",
+        },
+        idLocations: ["body"],
+        idFields: ["storageId"],
+      }),
       validateFile,
       uploadChain(),
       uploadCleanup,
@@ -52,6 +88,7 @@ const createRouter = (
     .post(
       "/overwrite",
       authenticate,
+
       uploadSmall.single("file"),
       validateFile,
       overwriteChain(),
@@ -61,6 +98,7 @@ const createRouter = (
     .post(
       "/overwrite-large",
       authenticate,
+
       uploadLarge.single("file"),
       validateFile,
       overwriteChain(),
@@ -70,23 +108,42 @@ const createRouter = (
     .get(
       "/download/:id",
       authenticate,
+      authorize({
+        entityTypes: {
+          id: "file",
+        },
+        idLocations: ["params"],
+        idFields: ["id"],
+      }),
       downloadChain(),
       validateRequest,
       fileController.download
     )
-    .delete("/delete", deleteChain(), validateRequest, fileController.delete)
-    .put(
-      "/update",
+    .delete(
+      "/delete",
       authenticate,
-      uploadLarge.single("file"),
-      validateFile,
-      downloadChain(),
+      authorize({
+        entityTypes: {
+          id: "file",
+        },
+        idLocations: ["body"],
+        idFields: ["id"],
+      }),
+      deleteChain(),
       validateRequest,
-      fileController.update
+      fileController.delete
     )
     .post(
       "/copy",
       authenticate,
+      authorize({
+        entityTypes: {
+          id: "file",
+          parentId: "dir",
+        },
+        idLocations: ["body"],
+        idFields: ["id", "parentId"],
+      }),
       copyChain(),
       validateRequest,
       fileController.copy
@@ -94,6 +151,14 @@ const createRouter = (
     .put(
       "/move",
       authenticate,
+      authorize({
+        entityTypes: {
+          id: "file",
+          parentId: "dir",
+        },
+        idLocations: ["body"],
+        idFields: ["id", "parentId"],
+      }),
       copyChain(),
       validateRequest,
       fileController.move
@@ -101,6 +166,13 @@ const createRouter = (
     .patch(
       "/rename",
       authenticate,
+      authorize({
+        entityTypes: {
+          id: "file",
+        },
+        idLocations: ["body"],
+        idFields: ["id"],
+      }),
       renameChain(),
       validateRequest,
       fileController.rename
@@ -111,6 +183,7 @@ const createRouter = (
   return router;
 };
 
+const getChain = () => [];
 const getFilesChain = () => [
   param("storageId").notEmpty().withMessage("Хранилище должно быть выбрано!"),
   param("parentId").optional(),

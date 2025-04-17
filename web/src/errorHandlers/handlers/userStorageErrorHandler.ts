@@ -7,7 +7,6 @@ const errorConfigs: ErrorConfig[] = [
   {
     errorName: UserStorageNotFoundError.name,
     errorDetails: {
-      value: "",
       msg: "Хранилище должно быть выбрано!",
       path: "id",
     },
@@ -15,7 +14,6 @@ const errorConfigs: ErrorConfig[] = [
   {
     errorName: UserStorageAlreadyExistsError.name,
     errorDetails: {
-      value: "",
       msg: "Хранилище с таким же названием уже создано. Выберите другое название!",
       path: "name",
     },

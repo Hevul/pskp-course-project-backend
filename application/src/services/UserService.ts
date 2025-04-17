@@ -28,7 +28,7 @@ class UserService implements IUserService {
   }
 
   async register(login: string, password: string): Promise<User> {
-    const exists = await this._repository.exists(login);
+    const exists = await this._repository.existsByLogin(login);
 
     if (exists) throw new UserAlreadyRegisteredError();
 

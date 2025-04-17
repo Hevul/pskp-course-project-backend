@@ -9,5 +9,6 @@ export default interface IFileLinkRepository {
   getByLink(link: string): Promise<FileLink>;
   add(fileLink: FileLink): Promise<FileLink>;
   delete(id: string): Promise<FileLink>;
+  deleteByFileInfoId(fileInfoId: string): Promise<void>;
   update(fileLink: FileLink): Promise<FileLink>;
 }

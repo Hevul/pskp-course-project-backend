@@ -1,5 +1,6 @@
 import config from "./config";
 import DirService from "../../application/src/services/DirService";
+import { AuthorizationService } from "../../application/src/services/AuthorizationService";
 import { FileLinkService } from "../../application/src/services/FileLinkService";
 import { FileService } from "../../application/src/services/FileService";
 import UserService from "../../application/src/services/UserService";
@@ -28,6 +29,8 @@ import createStorageRouter from "./routers/userStorageRouter";
 import createAuthRouter from "./routers/authRouter";
 import createDirRouter from "./routers/dirRouter";
 import createLinkRouter from "./routers/linkRouter";
+import { Request, Response, NextFunction, RequestHandler } from "express";
+import { createAuthorizeMiddlewareFactory } from "./middlewares/utils/createAuthorizeMiddlewareFactory";
 
 const dirInfoRepository = new DirInfoRepository();
 const dirRepository = new DirRepository(config.uploadDir);
@@ -51,7 +54,8 @@ const fileLinkService = new FileLinkService(
 const fileService = new FileService(
   fileInfoRepository,
   fileRepository,
-  dirInfoRepository
+  dirInfoRepository,
+  fileLinkRepository
 );
 const userService = new UserService(userRepository, hashProvider);
 const userStorageService = new UserStorageService(
@@ -66,8 +70,16 @@ const authService = new AuthService(
   jwtProvider,
   hashProvider
 );
+const authorizationService = new AuthorizationService(
+  fileInfoRepository,
+  dirInfoRepository,
+  userStorageRepository,
+  fileLinkRepository
+);
 
 const createAuthenticate = () => authenticate(jwtProvider, userService);
+const authorizeMiddlewareFactory =
+  createAuthorizeMiddlewareFactory(authorizationService);
 
 const userRouter = createUserRouter(
   new UserController(userService),
@@ -75,23 +87,27 @@ const userRouter = createUserRouter(
 );
 const fileRouter = creteFileRouter(
   createAuthenticate(),
+  authorizeMiddlewareFactory,
   new FileController(fileService, fileLinkService)
 );
 const dirRouter = createDirRouter(
   createAuthenticate(),
+  authorizeMiddlewareFactory,
   new DirController(dirService)
 );
 const storageRouter = createStorageRouter(
-  new UserStorageController(userStorageService),
-  createAuthenticate()
+  createAuthenticate(),
+  authorizeMiddlewareFactory,
+  new UserStorageController(userStorageService)
 );
 const authRouter = createAuthRouter(
   new AuthController(authService, jwtProvider),
   createAuthenticate()
 );
 const linkRouter = createLinkRouter(
-  new FileLinkController(fileLinkService, userService),
-  createAuthenticate()
+  createAuthenticate(),
+  authorizeMiddlewareFactory,
+  new FileLinkController(fileLinkService, userService)
 );
 
 const box = {

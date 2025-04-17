@@ -65,6 +65,10 @@ class FileLinkRepository implements IFileLinkRepository {
     return map(fileLinkDb);
   }
 
+  async deleteByFileInfoId(fileInfoId: string): Promise<void> {
+    await FileLinkDb.deleteOne({ file: fileInfoId });
+  }
+
   async exists(id: string): Promise<boolean> {
     try {
       return (await FileLinkDb.exists({ _id: id })) !== null;

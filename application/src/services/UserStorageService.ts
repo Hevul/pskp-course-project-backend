@@ -5,6 +5,7 @@ import UserStorage from "../../../core/src/entities/UserStorage";
 import IFileInfoRepository from "../../../core/src/repositories/IFileInfoRepository";
 import IDirInfoRepository from "../../../core/src/repositories/IDirInfoRepository";
 import UserStorageNotEmptyError from "../errors/UserStorageNotEmptyError";
+import { UserStorageFullInfoDTO } from "../dtos/UserStorageFullInfoDTO";
 
 class UserStorageService implements IUserStorageService {
   constructor(
@@ -13,6 +14,26 @@ class UserStorageService implements IUserStorageService {
     private readonly _fileInfoRepository: IFileInfoRepository,
     private readonly _dirInfoRepository: IDirInfoRepository
   ) {}
+
+  async getFullInfo(id: string): Promise<UserStorageFullInfoDTO> {
+    const storage = await this._userStorageRepository.get(id);
+
+    const files = (await this._fileInfoRepository.getAll()).filter(
+      (f) => f.storage === storage.id
+    );
+    const dirs = (await this._dirInfoRepository.getAll()).filter(
+      (d) => d.storage === storage.id
+    );
+
+    const totalSize = files.reduce((sum, file) => sum + file.size, 0);
+
+    return {
+      name: storage.name,
+      size: totalSize,
+      fileCount: files.length,
+      dirCount: dirs.length,
+    };
+  }
 
   async delete(id: string, force: boolean = false): Promise<UserStorage> {
     let storage = await this._userStorageRepository.get(id);

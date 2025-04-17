@@ -1,7 +1,9 @@
 import DirInfo from "../../../core/src/entities/DirInfo";
+import { DirInfoFullInfoDTO } from "../dtos/DirInfoFullInfoDTO";
 
 export default interface IDirService {
   getAllByStorageId(storageId: string): Promise<DirInfo[]>;
+  getFullInfo(id: string): Promise<DirInfoFullInfoDTO>;
   create(name: string, storageId: string, parentId?: string): Promise<DirInfo>;
   delete(id: string, force: boolean): Promise<DirInfo>;
   rename(id: string, name: string): Promise<DirInfo>;

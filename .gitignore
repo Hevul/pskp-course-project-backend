@@ -11,3 +11,4 @@ uploads/
 sandbox/
 
 web/.env
+web/test.http
