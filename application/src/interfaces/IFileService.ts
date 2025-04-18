@@ -3,12 +3,6 @@ import FileInfo from "../../../core/src/entities/FileInfo";
 
 export default interface IFileService {
   upload(
-    name: string,
-    data: Buffer,
-    storageId: string,
-    parentId?: string
-  ): Promise<FileInfo>;
-  uploadStream(
     filename: string,
     stream: Readable,
     storageId: string,

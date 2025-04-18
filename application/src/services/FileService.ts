@@ -53,11 +53,9 @@ export class FileService implements IFileService {
 
     await this._fileInfoRepository.update(file);
 
-    const data = await this._fileRepository.get(oldPathname);
     const newPathname = await this._fileInfoRepository.getPathname(id);
 
-    await this._fileRepository.rm(oldPathname);
-    await this._fileRepository.save(newPathname, data);
+    await this._fileRepository.move(oldPathname, newPathname);
 
     return file;
   }
@@ -108,10 +106,7 @@ export class FileService implements IFileService {
 
     const newPathname = await this._fileInfoRepository.getPathname(file.id);
 
-    const data = await this._fileRepository.get(oldPathname);
-
-    await this._fileRepository.save(newPathname, data);
-    await this._fileRepository.rm(oldPathname);
+    await this._fileRepository.move(oldPathname, newPathname);
 
     return file;
   }
@@ -164,9 +159,7 @@ export class FileService implements IFileService {
       sourceFile.id
     );
 
-    const data = await this._fileRepository.get(sourceFilePathname);
-
-    await this._fileRepository.save(pathname, data);
+    await this._fileRepository.copy(sourceFilePathname, pathname);
 
     return newFile;
   }
@@ -205,31 +198,6 @@ export class FileService implements IFileService {
     return fileInfo;
   }
 
-  async upload(
-    name: string,
-    data: Buffer,
-    storageId: string,
-    parentId?: string
-  ): Promise<FileInfo> {
-    let file = new FileInfo(name, new Date(), data.length, storageId, parentId);
-
-    file = await this._fileInfoRepository.add(file);
-
-    if (parentId) {
-      const parent = await this._dirInfoRepository.get(parentId);
-
-      parent.addFile(file.id);
-
-      await this._dirInfoRepository.update(parent);
-    }
-
-    const path = await this._fileInfoRepository.getPathname(file.id);
-
-    await this._fileRepository.save(path, data);
-
-    return file;
-  }
-
   async download(id: string): Promise<[FileInfo, string]> {
     const fileInfo = await this._fileInfoRepository.get(id);
 
@@ -238,7 +206,7 @@ export class FileService implements IFileService {
     return [fileInfo, pathname];
   }
 
-  async uploadStream(
+  async upload(
     filename: string,
     readableStream: Readable,
     storageId: string,

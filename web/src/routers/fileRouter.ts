@@ -54,22 +54,6 @@ const createRouter = (
     )
     .post(
       "/upload",
-      uploadSmall.single("file"),
-      authenticate,
-      authorize({
-        entityTypes: {
-          storageId: "storage",
-        },
-        idLocations: ["body"],
-        idFields: ["storageId"],
-      }),
-      validateFile,
-      uploadChain(),
-      validateRequest,
-      fileController.upload
-    )
-    .post(
-      "/upload-large",
       uploadLarge.single("file"),
       authenticate,
       authorize({
@@ -83,27 +67,7 @@ const createRouter = (
       uploadChain(),
       uploadCleanup,
       validateRequest,
-      fileController.uploadLarge
-    )
-    .post(
-      "/overwrite",
-      authenticate,
-
-      uploadSmall.single("file"),
-      validateFile,
-      overwriteChain(),
-      validateRequest,
-      fileController.overwrite
-    )
-    .post(
-      "/overwrite-large",
-      authenticate,
-
-      uploadLarge.single("file"),
-      validateFile,
-      overwriteChain(),
-      validateRequest,
-      fileController.overwriteLarge
+      fileController.upload
     )
     .get(
       "/download/:id",

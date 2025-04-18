@@ -25,8 +25,8 @@ app.use(express.json({ limit: "5gb" }));
 app.use(express.urlencoded({ limit: "5gb", extended: true }));
 app.use(cookieParser());
 app.use(extendResponse);
-app.use("/health", health);
 
+app.use("/health", health);
 app.use("/api/auth", box.authRouter);
 app.use("/api/user", box.userRouter);
 app.use("/api/file", box.fileRouter);

@@ -1,10 +1,4 @@
-import { createWriteStream, promises as fs } from "fs";
-import pathM from "path";
-import PathCannotBeEmptyError from "./errors/PathCannotBeEmptyError";
-import InvalidCharsInPathError from "./errors/InvalidCharsInPathError";
-import AbsolutePathNotAllowedError from "./errors/AbsolutePathNotAllowedError";
-import PathOutsideBaseDirectoryError from "./errors/PathOutsideBaseDirectoryError";
-import PathnameMaxLengthError from "./errors/PathnameMaxLengthError";
+import { createReadStream, createWriteStream, promises as fs } from "fs";
 import FileAlreadyExistsError from "./errors/FileAlreadyExistsError";
 import IFileRepository from "../../../../../core/src/repositories/IFileRepository";
 import StorageRepository from "../StorageRepository";
@@ -28,27 +22,18 @@ class FileRepository extends StorageRepository implements IFileRepository {
     }
   }
 
-  async save(pathname: string, data: Buffer): Promise<void> {
-    if (await super.exists(pathname)) throw new FileAlreadyExistsError();
-
-    await fs.writeFile(`${super.dir}${pathname}`, data);
-  }
-
   async overwrite(pathname: string, data: Buffer): Promise<void> {
     if (!(await super.exists(pathname))) throw new FileNotFoundError();
 
     await fs.writeFile(`${super.dir}${pathname}`, data);
   }
 
-  async get(pathname: string): Promise<Buffer> {
+  async getStream(pathname: string): Promise<Readable> {
     const fullPath = `${super.dir}${pathname}`;
 
-    const isFileExists = await super.exists(pathname);
+    if (!(await super.exists(pathname))) throw new FileNotFoundError();
 
-    if (!isFileExists) throw new FileNotFoundError();
-
-    const data = await fs.readFile(fullPath);
-    return data;
+    return createReadStream(fullPath);
   }
 
   async rm(pathname: string): Promise<void> {
@@ -61,20 +46,46 @@ class FileRepository extends StorageRepository implements IFileRepository {
     await fs.unlink(path);
   }
 
-  validatePath(pathname: string) {
-    if (!pathname) throw new PathCannotBeEmptyError();
+  async move(oldPathname: string, newPathname: string): Promise<void> {
+    const fullOldPath = `${super.dir}${oldPathname}`;
+    const fullNewPath = `${super.dir}${newPathname}`;
 
-    if (pathname.startsWith("./")) throw new AbsolutePathNotAllowedError();
+    if (!(await super.exists(oldPathname))) throw new FileNotFoundError();
+    if (await super.exists(newPathname)) throw new FileAlreadyExistsError();
 
-    const maxLength = 255;
-    if (pathname.length > maxLength) throw new PathnameMaxLengthError();
+    await fs.rename(fullOldPath, fullNewPath);
+  }
 
-    const invalidChars = /[<>:"\\|?*\x00-\x1F]/;
-    if (invalidChars.test(pathname)) throw new InvalidCharsInPathError();
+  async copy(
+    sourcePathname: string,
+    destinationPathname: string
+  ): Promise<void> {
+    const fullSourcePath = `${super.dir}${sourcePathname}`;
+    const fullDestinationPath = `${super.dir}${destinationPathname}`;
 
-    const resolvedPath = pathM.resolve(super.dir, pathname);
-    if (!resolvedPath.startsWith(super.dir))
-      throw new PathOutsideBaseDirectoryError();
+    if (!(await super.exists(sourcePathname))) throw new FileNotFoundError();
+
+    if (await super.exists(destinationPathname))
+      throw new FileAlreadyExistsError();
+
+    const readStream = createReadStream(fullSourcePath);
+    const writeStream = createWriteStream(fullDestinationPath);
+
+    try {
+      await pipeline(readStream, writeStream);
+    } catch (error) {
+      try {
+        if (await super.exists(destinationPathname)) {
+          await fs.unlink(fullDestinationPath);
+        }
+      } catch (cleanupError) {
+        console.error("Failed to cleanup after failed copy:", cleanupError);
+      }
+      throw error;
+    } finally {
+      if (!readStream.destroyed) readStream.destroy();
+      if (!writeStream.destroyed) writeStream.destroy();
+    }
   }
 }
 

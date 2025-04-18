@@ -67,20 +67,6 @@ export class FileController {
     res: Response,
     next: NextFunction
   ): Promise<void> => {
-    const file = req.file as Express.Multer.File;
-    const { storageId, name } = req.body;
-    const parentId = req.body.parentId === "" ? undefined : req.body.parentId;
-
-    await this._fileService.upload(name, file.buffer, storageId, parentId);
-
-    res.good({ message: `File ${name} uploaded successfully` });
-  };
-
-  uploadLarge = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
     try {
       const file = req.file as Express.Multer.File;
       const { storageId, name } = req.body;
@@ -88,48 +74,7 @@ export class FileController {
 
       const fileStream = createReadStream(file.path);
 
-      await this._fileService.uploadStream(
-        name,
-        fileStream,
-        storageId,
-        file.size,
-        parentId
-      );
-
-      fs.unlinkSync(file.path);
-
-      res.good({ message: `File ${name} uploaded successfully` });
-    } catch (error) {
-      next(error);
-    }
-  };
-
-  overwrite = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    const file = req.file as Express.Multer.File;
-    const { id } = req.body;
-
-    await this._fileService.overwrite(id, file.buffer);
-
-    res.good({ message: `File overwritten successfully` });
-  };
-
-  overwriteLarge = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    try {
-      const file = req.file as Express.Multer.File;
-      const { storageId, name } = req.body;
-      const parentId = req.body.parentId === "" ? undefined : req.body.parentId;
-
-      const fileStream = createReadStream(file.path);
-
-      await this._fileService.uploadStream(
+      await this._fileService.upload(
         name,
         fileStream,
         storageId,
