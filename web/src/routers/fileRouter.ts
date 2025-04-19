@@ -9,13 +9,6 @@ import { uploadCleanup } from "../middlewares/utils/uploadCleanup";
 import { uploadLarge } from "../utils/multerConfig";
 import { createAuthorizeMiddlewareFactory } from "../middlewares/utils/createAuthorizeMiddlewareFactory";
 
-const uploadSmall = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: 500 * 1024 * 1024,
-  },
-});
-
 const createRouter = (
   authenticate: RequestHandler,
   authorize: ReturnType<typeof createAuthorizeMiddlewareFactory>,

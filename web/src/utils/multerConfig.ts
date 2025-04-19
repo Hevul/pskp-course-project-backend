@@ -5,7 +5,6 @@ import { Request } from "express";
 
 const tempDir = "/home/vlad/projects/project-casio/backend/temp";
 
-// Создаем временную директорию, если не существует
 if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir, { recursive: true });
 }

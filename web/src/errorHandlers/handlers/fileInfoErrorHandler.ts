@@ -1,4 +1,5 @@
 import CopyCollisionError from "../../../../application/src/errors/CopyCollisionError";
+import CreateCollisionError from "../../../../application/src/errors/CreateCollisionError";
 import DirectoryMoveInChildError from "../../../../application/src/errors/DirectoryMoveInChildError";
 import MoveCollisionError from "../../../../application/src/errors/MoveCollisionError";
 import RenameCollisionError from "../../../../application/src/errors/RenameCollisionError";
@@ -62,27 +63,24 @@ const operations: ErrorConfig[] = [
     errorName: MoveCollisionError.name,
     errorDetails: {
       msg: "Файл с таким же именем уже существует в выбранной папке!",
-      path: "",
     },
   },
   {
     errorName: RenameCollisionError.name,
     errorDetails: {
       msg: "Файл с таким же именем уже существует в выбранной папке!",
-      path: "",
     },
   },
   {
     errorName: CopyCollisionError.name,
     errorDetails: {
       msg: "Файл с таким же именем уже существует в выбранной папке!",
-      path: "",
     },
   },
   {
-    errorName: FileInfoAlreadyExistsError.name,
+    errorName: CreateCollisionError.name,
     errorDetails: {
-      msg: "Файл с таким же именем уже существует в текущей папке!",
+      msg: "Файл с таким же именем уже существует в выбранной папке!",
       path: "upload",
     },
   },

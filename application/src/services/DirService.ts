@@ -26,13 +26,13 @@ class DirService implements IDirService {
   ): Promise<string[]> {
     if (isDir) {
       const dirs = await this._dirInfoRepository.find({
-        parentId,
+        parent: parentId,
         storage: storageId,
       });
       return dirs.map((d) => d.name);
     } else {
       const files = await this._fileInfoRepository.find({
-        parentId,
+        parent: parentId,
         storage: storageId,
       });
       return files.map((f) => f.name);
