@@ -9,9 +9,9 @@ export const createAuthorizeMiddlewareFactory = (
 ) => {
   return function createAuthorizeMiddleware(options: {
     entityTypes?: {
-      [field: string]: EntityType; // Тип сущности для каждого поля
+      [field: string]: EntityType;
     };
-    defaultEntityType?: EntityType; // Тип по умолчанию
+    defaultEntityType?: EntityType;
     idLocations?: ("params" | "body" | "query")[];
     idFields?: string[];
   }): RequestHandler {
@@ -24,7 +24,6 @@ export const createAuthorizeMiddlewareFactory = (
 
         const entitiesToCheck: { id: string; type: EntityType }[] = [];
 
-        // Собираем все ID и их типы
         options.idLocations?.forEach((location) => {
           options.idFields?.forEach((field) => {
             const value = req[location]?.[field];
@@ -52,7 +51,6 @@ export const createAuthorizeMiddlewareFactory = (
           return;
         }
 
-        // Проверяем каждую сущность
         for (const { id, type } of entitiesToCheck) {
           await authService.authorizeRequest(req.user.id, [id], type);
         }

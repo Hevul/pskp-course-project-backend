@@ -16,14 +16,29 @@ export class FileLinkService implements IFileLinkService {
     private readonly _hashProvider: IHashProvider
   ) {}
 
+  async checkAccess(link: string, userId: string): Promise<void> {
+    const fileLink = await this._fileLinkRepository.getByLink(link);
+
+    if (
+      fileLink.isPublic ||
+      fileLink.ownerId === userId ||
+      fileLink.friends.includes(userId)
+    ) {
+      return;
+    } else {
+      throw new LinkAccessDeniedError();
+    }
+  }
+
   async getById(id: string): Promise<FileLink> {
     const link = await this._fileLinkRepository.get(id);
     return link;
   }
 
-  async getByLink(link: string): Promise<FileLink> {
+  async getByLink(link: string): Promise<[FileLink, FileInfo]> {
     const fileLink = await this._fileLinkRepository.getByLink(link);
-    return fileLink;
+    const fileInfo = await this._fileInfoRepository.get(fileLink.fileInfoId);
+    return [fileLink, fileInfo];
   }
 
   async getAllByOwnerId(ownerId: string): Promise<FileLink[]> {
@@ -38,17 +53,13 @@ export class FileLinkService implements IFileLinkService {
 
   async delete(id: string): Promise<FileLink> {
     let link = await this._fileLinkRepository.get(id);
-
     await this._fileLinkRepository.delete(id);
-
     return link;
   }
 
   async setPublicity(id: string, publicity: boolean): Promise<void> {
     let link = await this._fileLinkRepository.get(id);
-
     link.setPublicity(publicity);
-
     await this._fileLinkRepository.update(link);
   }
 
@@ -56,9 +67,7 @@ export class FileLinkService implements IFileLinkService {
     const user = await this._userRepository.getById(userId);
 
     let link = await this._fileLinkRepository.get(id);
-
     link.removeFriend(user.id);
-
     await this._fileLinkRepository.update(link);
 
     return link;
@@ -68,7 +77,6 @@ export class FileLinkService implements IFileLinkService {
     let link = await this._fileLinkRepository.get(id);
 
     link.friends = [];
-
     await this._fileLinkRepository.update(link);
 
     return link;
@@ -78,9 +86,7 @@ export class FileLinkService implements IFileLinkService {
     const user = await this._userRepository.getByLogin(friendName);
 
     let link = await this._fileLinkRepository.get(id);
-
     link.addFriend(user.id);
-
     await this._fileLinkRepository.update(link);
 
     return link;
@@ -93,13 +99,10 @@ export class FileLinkService implements IFileLinkService {
     isPublic: boolean
   ): Promise<FileLink> {
     const exists = await this._fileLinkRepository.existsByFileId(fileInfoId);
-
     if (exists) throw new LinkAlreadyExistsError();
 
     const link = this._hashProvider.generate(`${ownerId}.${fileInfoId}`);
-
     let fileLink = new FileLink(link, ownerId, fileInfoId, friends, isPublic);
-
     fileLink = await this._fileLinkRepository.add(fileLink);
 
     return fileLink;
@@ -107,31 +110,10 @@ export class FileLinkService implements IFileLinkService {
 
   async download(link: string, userId: string): Promise<[FileInfo, string]> {
     const fileLink = await this._fileLinkRepository.getByLink(link);
-
-    if (fileLink.isPrivate) {
-      const isFriend = fileLink.friends.includes(userId);
-      const isOwner = fileLink.ownerId === userId;
-
-      if (!isFriend && !isOwner) throw new LinkAccessDeniedError();
-    }
-
     const fileInfo = await this._fileInfoRepository.get(fileLink.fileInfoId);
 
-    const pathname = await this._fileInfoRepository.getPathname(fileInfo.id);
+    const pathname = `/${fileInfo.storage}/${fileInfo.id}`;
 
     return [fileInfo, pathname];
-  }
-
-  async getOrGenerate(
-    ownerId: string,
-    fileInfoId: string,
-    friends: string[],
-    isPublic: boolean
-  ): Promise<FileLink> {
-    const exists = await this._fileLinkRepository.existsByFileId(fileInfoId);
-
-    if (exists) return await this.getByFileInfoId(fileInfoId);
-
-    return await this.generate(ownerId, fileInfoId, friends, isPublic);
   }
 }

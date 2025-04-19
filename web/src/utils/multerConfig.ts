@@ -2,8 +2,10 @@ import multer from "multer";
 import fs from "fs";
 import path from "path";
 import { Request } from "express";
+import config from "../config";
+import { v4 as uuidv4 } from "uuid";
 
-const tempDir = "/home/vlad/projects/project-casio/backend/temp";
+const tempDir = config.tempDir;
 
 if (!fs.existsSync(tempDir)) {
   fs.mkdirSync(tempDir, { recursive: true });
@@ -14,7 +16,7 @@ const storage = multer.diskStorage({
     cb(null, tempDir);
   },
   filename: (req, file, cb) => {
-    const filename = `${Date.now()}-${file.originalname}`;
+    const filename = `${uuidv4()}`;
     req.uploadingFileName = filename;
     cb(null, filename);
   },

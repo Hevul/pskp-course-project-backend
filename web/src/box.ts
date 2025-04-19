@@ -57,7 +57,6 @@ const fileLinkService = new FileLinkService(
 const fileService = new FileService(
   fileInfoRepository,
   fileRepository,
-  dirInfoRepository,
   fileLinkRepository
 );
 const userService = new UserService(userRepository, hashProvider);

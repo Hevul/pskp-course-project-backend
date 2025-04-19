@@ -27,10 +27,12 @@ class FileLinkController {
     next: NextFunction
   ): Promise<void> => {
     const link = req.params.link;
+    const user = req.user!;
 
-    const fileLink = await this._fileLinkService.getByLink(link);
+    await this._fileLinkService.checkAccess(link, user.id);
+    const [fileLink, fileInfo] = await this._fileLinkService.getByLink(link);
 
-    res.status(200).json({ link: fileLink, ok: true });
+    res.status(200).json({ link: { ...fileLink, filename: fileInfo.name } });
   };
 
   get = async (
@@ -78,6 +80,7 @@ class FileLinkController {
     const link = req.params.link;
     const user = req.user!;
 
+    await this._fileLinkService.checkAccess(link, user.id);
     const [file, pathname] = await this._fileLinkService.download(
       link,
       user.id

@@ -10,6 +10,10 @@ declare global {
     }
     interface Request {
       user?: User;
+      tempFile?: {
+        path: string;
+        size: number;
+      };
       file?: Express.Multer.File;
       uploadingFileName?: string;
     }

@@ -1,3 +1,4 @@
+import LinkAccessDeniedError from "../../../../application/src/errors/LinkAccessDeniedError";
 import CannotAddSelfAsFriendError from "../../../../core/src/errors/CannotAddSelfAsFriendError";
 import FriendAlreadyAddedError from "../../../../core/src/errors/FriendAlreadyAddedError";
 import FileLinkNotFoundError from "../../../../infrastructure/src/data/db/fileLink/errors/FileLinkNotFoundError";
@@ -30,6 +31,13 @@ const errorConfigs: ErrorConfig[] = [
     errorName: FriendAlreadyAddedError.name,
     errorDetails: {
       msg: "Пользователь уже добавлен в список доверенных!",
+    },
+  },
+  {
+    errorName: LinkAccessDeniedError.name,
+    errorDetails: {
+      msg: "Доступ к ссылке запрещён!",
+      status: 403,
     },
   },
 ];

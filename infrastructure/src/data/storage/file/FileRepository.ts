@@ -26,10 +26,9 @@ class FileRepository extends StorageRepository implements IFileRepository {
     }
   }
 
-  async overwrite(pathname: string, data: Buffer): Promise<void> {
-    if (!(await super.exists(pathname))) throw new FileNotFoundError();
-
-    await fs.writeFile(`${super.dir}${pathname}`, data);
+  async overwrite(pathname: string, readableStream: Readable): Promise<void> {
+    await this.rm(pathname);
+    await this.saveStream(pathname, readableStream);
   }
 
   async getStream(pathname: string): Promise<Readable> {

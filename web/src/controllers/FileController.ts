@@ -4,6 +4,7 @@ import IFileService from "../../../application/src/interfaces/IFileService";
 import config from "../config";
 import IFileLinkService from "../../../application/src/interfaces/IFileLinkService";
 import fs, { createReadStream } from "fs";
+import path from "path";
 
 export class FileController {
   constructor(
@@ -67,13 +68,34 @@ export class FileController {
     res: Response,
     next: NextFunction
   ): Promise<void> => {
-    try {
-      const file = req.file as Express.Multer.File;
-      const { storageId, name } = req.body;
-      const parentId = req.body.parentId === "" ? undefined : req.body.parentId;
+    const file = req.file as Express.Multer.File;
+    const { storageId, name, overwrite } = req.body;
+    const parentId = req.body.parentId === "" ? undefined : req.body.parentId;
 
-      const fileStream = createReadStream(file.path);
+    const shouldOverwrite = overwrite === "true";
 
+    const existingFile = await this._fileService.checkFileExists(
+      name,
+      storageId,
+      parentId
+    );
+
+    if (existingFile && !shouldOverwrite) {
+      res.status(400).json({
+        error: "File already exists",
+        conflict: true,
+        tempFileId: file.filename,
+        existingFileId: existingFile.id,
+      });
+
+      return;
+    }
+
+    const fileStream = createReadStream(file.path);
+
+    if (existingFile && shouldOverwrite) {
+      await this._fileService.overwrite(existingFile.id, fileStream, file.size);
+    } else {
       await this._fileService.upload(
         name,
         fileStream,
@@ -81,10 +103,38 @@ export class FileController {
         file.size,
         parentId
       );
+    }
 
-      fs.unlinkSync(file.path);
+    fs.unlinkSync(file.path);
 
-      res.good({ message: `File ${name} uploaded successfully` });
+    res.good({
+      message: `File ${name} ${
+        existingFile ? "overwritten" : "uploaded"
+      } successfully`,
+    });
+  };
+
+  confirmOverwrite = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { existingFileId, tempFileId } = req.body;
+      const tempFilePath = path.join(config.tempDir, tempFileId);
+
+      if (!tempFileId) {
+        throw new Error("No temporary file available for overwrite");
+      }
+
+      const fileStream = createReadStream(tempFilePath);
+      const stats = fs.statSync(tempFilePath);
+
+      await this._fileService.overwrite(existingFileId, fileStream, stats.size);
+
+      fs.unlinkSync(tempFilePath);
+
+      res.good({ message: "File overwritten successfully" });
     } catch (error) {
       next(error);
     }
@@ -100,21 +150,6 @@ export class FileController {
     await this._fileService.delete(id);
 
     res.good({ message: "File is deleted" });
-  };
-
-  update = async (
-    req: Request,
-    res: Response,
-    next: NextFunction
-  ): Promise<void> => {
-    const file = req.file;
-    const id = req.body.id;
-
-    const buffer = file!.buffer;
-
-    await this._fileService.overwrite(id, buffer);
-
-    res.good({ message: "File is updated" });
   };
 
   copy = async (

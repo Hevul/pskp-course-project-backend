@@ -57,10 +57,21 @@ const createRouter = (
         idFields: ["storageId"],
       }),
       validateFile,
-      uploadChain(),
       uploadCleanup,
-      validateRequest,
       fileController.upload
+    )
+    .post(
+      "/confirm-overwrite",
+      authenticate,
+      authorize({
+        entityTypes: {
+          existingFileId: "file",
+        },
+        idLocations: ["body"],
+        idFields: ["existingFileId"],
+      }),
+      validateRequest,
+      fileController.confirmOverwrite
     )
     .get(
       "/download/:id",

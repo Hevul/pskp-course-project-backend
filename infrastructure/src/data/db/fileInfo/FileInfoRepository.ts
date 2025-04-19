@@ -172,7 +172,8 @@ class FileInfoRepository implements IFileInfoRepository {
       fileDoc.size,
       fileDoc.storage.toString(),
       fileDoc.parent?.toString(),
-      fileDoc._id.toString()
+      fileDoc._id.toString(),
+      fileDoc.updateAt
     );
   }
 }

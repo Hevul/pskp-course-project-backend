@@ -14,7 +14,6 @@ export class FileService implements IFileService {
   constructor(
     private readonly _fileInfoRepository: IFileInfoRepository,
     private readonly _fileRepository: IFileRepository,
-    private readonly _dirInfoRepository: IDirInfoRepository,
     private readonly _fileLinkRepository: IFileLinkRepository
   ) {}
 
@@ -46,6 +45,20 @@ export class FileService implements IFileService {
 
   private _getFilePath(file: FileInfo): string {
     return `/${file.storage}/${file.id}`;
+  }
+
+  async checkFileExists(
+    filename: string,
+    storageId: string,
+    parentId?: string
+  ): Promise<FileInfo | null> {
+    const existingFiles = await this._fileInfoRepository.find({
+      name: filename,
+      storage: storageId,
+      parent: parentId || { $exists: false },
+    });
+
+    return existingFiles.length > 0 ? existingFiles[0] : null;
   }
 
   async getAllByStorageId(storageId: string): Promise<FileInfo[]> {
@@ -114,15 +127,22 @@ export class FileService implements IFileService {
     return createdFile;
   }
 
-  async overwrite(id: string, data: Buffer): Promise<FileInfo> {
-    const file = await this._fileInfoRepository.get(id);
-    file.updateAt = new Date();
-    file.size = data.length;
+  async overwrite(
+    fileId: string,
+    fileStream: Readable,
+    newSize: number
+  ): Promise<FileInfo> {
+    const existingFile = await this._fileInfoRepository.get(fileId);
 
-    await this._fileInfoRepository.update(file);
-    await this._fileRepository.overwrite(this._getFilePath(file), data);
+    existingFile.updateAt = new Date();
+    existingFile.size = newSize;
 
-    return file;
+    await this._fileInfoRepository.update(existingFile);
+
+    const filePath = `/${existingFile.storage}/${existingFile.id}`;
+    await this._fileRepository.overwrite(filePath, fileStream);
+
+    return existingFile;
   }
 
   async delete(id: string): Promise<FileInfo> {

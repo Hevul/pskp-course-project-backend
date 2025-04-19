@@ -11,10 +11,19 @@ export default interface IFileService {
   ): Promise<FileInfo>;
   download(pathname: string): Promise<[FileInfo, string]>;
   delete(id: string): Promise<FileInfo>;
-  overwrite(id: string, data: Buffer): Promise<FileInfo>;
   copy(id: string, destinationId?: string): Promise<FileInfo>;
   move(id: string, destinationId?: string): Promise<FileInfo>;
   rename(id: string, name: string): Promise<FileInfo>;
   get(id: string): Promise<FileInfo>;
   getAllByStorageId(id: string): Promise<FileInfo[]>;
+  checkFileExists(
+    filename: string,
+    storageId: string,
+    parentId?: string
+  ): Promise<FileInfo | null>;
+  overwrite(
+    fileId: string,
+    fileStream: Readable,
+    newSize: number
+  ): Promise<FileInfo>;
 }

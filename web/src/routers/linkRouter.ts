@@ -40,14 +40,12 @@ const createRouter = (
     .get(
       "/get-by-link/:link",
       authenticate,
-      // ОЁЙ
       validateRequest,
       fileLinkController.getByLink
     )
     .get(
       "/download/:link",
       authenticate,
-      // БЕДА
       downloadChain(),
       validateRequest,
       fileLinkController.download
