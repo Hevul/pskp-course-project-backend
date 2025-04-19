@@ -50,9 +50,8 @@ class DirController {
     next: NextFunction
   ): Promise<void> => {
     const id = req.body.id;
-    const force = req.body.force;
 
-    await this._dirService.delete(id, true);
+    await this._dirService.delete(id);
 
     res.good();
   };

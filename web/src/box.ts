@@ -29,7 +29,6 @@ import createStorageRouter from "./routers/userStorageRouter";
 import createAuthRouter from "./routers/authRouter";
 import createDirRouter from "./routers/dirRouter";
 import createLinkRouter from "./routers/linkRouter";
-import { Request, Response, NextFunction, RequestHandler } from "express";
 import { createAuthorizeMiddlewareFactory } from "./middlewares/utils/createAuthorizeMiddlewareFactory";
 
 const dirInfoRepository = new DirInfoRepository();
@@ -44,7 +43,11 @@ const blackRepository = new BlackRepository();
 const jwtProvider = new JwtProvider(config.jwtSecret);
 const hashProvider = new HashSha256Provider();
 
-const dirService = new DirService(dirRepository, dirInfoRepository);
+const dirService = new DirService(
+  dirInfoRepository,
+  fileInfoRepository,
+  fileRepository
+);
 const fileLinkService = new FileLinkService(
   fileLinkRepository,
   fileInfoRepository,

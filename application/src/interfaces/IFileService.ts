@@ -12,7 +12,7 @@ export default interface IFileService {
   download(pathname: string): Promise<[FileInfo, string]>;
   delete(id: string): Promise<FileInfo>;
   overwrite(id: string, data: Buffer): Promise<FileInfo>;
-  copy(id: string, parentId?: string): Promise<FileInfo>;
+  copy(id: string, destinationId?: string): Promise<FileInfo>;
   move(id: string, destinationId?: string): Promise<FileInfo>;
   rename(id: string, name: string): Promise<FileInfo>;
   get(id: string): Promise<FileInfo>;

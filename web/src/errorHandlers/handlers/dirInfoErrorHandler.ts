@@ -1,4 +1,5 @@
 import CopyCollisionError from "../../../../application/src/errors/CopyCollisionError";
+import CreateCollisionError from "../../../../application/src/errors/CreateCollisionError";
 import DirectoryMoveInChildError from "../../../../application/src/errors/DirectoryMoveInChildError";
 import DirectoryMoveInItSelfError from "../../../../application/src/errors/DirectoryMoveInItSelfError";
 import MoveCollisionError from "../../../../application/src/errors/MoveCollisionError";
@@ -75,7 +76,7 @@ const nameValidation: ErrorConfig[] = [
 
 const operations: ErrorConfig[] = [
   {
-    errorName: DirInfoAlreadyExistsError.name,
+    errorName: CreateCollisionError.name,
     errorDetails: {
       msg: "В текущей папке уже есть папка с таким же именем! Выберите другое имя.",
       path: "name",
@@ -85,28 +86,24 @@ const operations: ErrorConfig[] = [
     errorName: DirectoryMoveInChildError.name,
     errorDetails: {
       msg: "Невозможно переместить папку в одну из её дочерних папок!",
-      path: "",
     },
   },
   {
     errorName: DirectoryMoveInItSelfError.name,
     errorDetails: {
       msg: "Невозможно переместить папку в себя же!",
-      path: "",
     },
   },
   {
     errorName: MoveCollisionError.name,
     errorDetails: {
       msg: "Папка с таким же именем уже существует в выбранной папке!",
-      path: "",
     },
   },
   {
     errorName: CopyCollisionError.name,
     errorDetails: {
       msg: "Папка с таким же именем уже существует в выбранной папке!",
-      path: "",
     },
   },
 ];

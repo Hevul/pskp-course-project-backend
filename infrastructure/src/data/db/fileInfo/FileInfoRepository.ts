@@ -5,8 +5,14 @@ import FileInfoDb from "../fileInfo/FileInfoDb";
 import FileInfoAlreadyExistsError from "./errors/FileInfoAlreadyExistsError";
 import DirInfoDb from "../dirInfo/DirInfoDb";
 import DirInfoNotFoundError from "../dirInfo/errors/DirInfoNotFoundError";
+import { Types } from "mongoose";
 
 class FileInfoRepository implements IFileInfoRepository {
+  async count(query: { [key: string]: any }): Promise<number> {
+    const processedQuery = this._processQuery(query);
+    return FileInfoDb.countDocuments(processedQuery).exec();
+  }
+
   async exists(id: string): Promise<boolean> {
     try {
       return (await FileInfoDb.exists({ _id: id })) !== null;
@@ -81,7 +87,7 @@ class FileInfoRepository implements IFileInfoRepository {
     const fileInfosDb = await FileInfoDb.find();
 
     const fileInfos = await Promise.all(
-      fileInfosDb.map(async (f) => await map(f))
+      fileInfosDb.map((f) => this._mapToFileInfo(f))
     );
 
     return fileInfos;
@@ -93,7 +99,7 @@ class FileInfoRepository implements IFileInfoRepository {
 
       if (!fileInfoDb) throw new FileInfoNotFoundError();
 
-      return map(fileInfoDb);
+      return this._mapToFileInfo(fileInfoDb);
     } catch {
       throw new FileInfoNotFoundError();
     }
@@ -111,7 +117,7 @@ class FileInfoRepository implements IFileInfoRepository {
         parent,
       });
 
-      return map(fileInfoDb);
+      return this._mapToFileInfo(fileInfoDb);
     } catch (error: any) {
       if (error.code === 11000) throw new FileInfoAlreadyExistsError();
       throw error;
@@ -131,20 +137,44 @@ class FileInfoRepository implements IFileInfoRepository {
 
     await FileInfoDb.deleteOne({ _id: fileInfoDb._id });
 
-    return map(fileInfoDb);
+    return this._mapToFileInfo(fileInfoDb);
   }
-}
 
-async function map(fileInfoDb: any): Promise<FileInfo> {
-  return new FileInfo(
-    fileInfoDb.name,
-    fileInfoDb.uploadAt,
-    fileInfoDb.size,
-    fileInfoDb.storage.toString(),
-    fileInfoDb.parent?.toString(),
-    fileInfoDb._id.toString(),
-    fileInfoDb.updateAt
-  );
+  async find(query: { [key: string]: any }): Promise<FileInfo[]> {
+    const processedQuery = this._processQuery(query);
+
+    const fileDocs = await FileInfoDb.find(processedQuery).lean().exec();
+
+    return fileDocs.map((fileDoc) => this._mapToFileInfo(fileDoc));
+  }
+
+  private _processQuery(query: { [key: string]: any }): { [key: string]: any } {
+    const processed = { ...query };
+
+    if (processed.parent) processed.parent = this._toObjectId(processed.parent);
+
+    if (processed.storage)
+      processed.storage = this._toObjectId(processed.storage);
+
+    if (processed._id) processed._id = this._toObjectId(processed._id);
+
+    return processed;
+  }
+
+  private _toObjectId(id: string | Types.ObjectId): Types.ObjectId {
+    return typeof id === "string" ? new Types.ObjectId(id) : id;
+  }
+
+  private _mapToFileInfo(fileDoc: any): FileInfo {
+    return new FileInfo(
+      fileDoc.name,
+      fileDoc.uploadAt,
+      fileDoc.size,
+      fileDoc.storage.toString(),
+      fileDoc.parent?.toString(),
+      fileDoc._id.toString()
+    );
+  }
 }
 
 export default FileInfoRepository;

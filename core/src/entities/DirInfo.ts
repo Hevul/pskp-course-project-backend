@@ -9,8 +9,6 @@ import ReservedNameError from "../errors/ReservedNameError";
 
 class DirInfo {
   private _name: string;
-  public files: string[] = [];
-  public subdirectories: string[] = [];
 
   constructor(
     name: string,
@@ -54,25 +52,6 @@ class DirInfo {
       throw new InvalidDirectoryCharactersError(
         "буквы, цифры, _, -, ., пробел"
       );
-  }
-
-  addFile(fileInfoId: string) {
-    if (!this.files.includes(fileInfoId)) this.files.push(fileInfoId);
-  }
-
-  removeFile(fileInfoId: string) {
-    this.files = this.files.filter((f) => f !== fileInfoId);
-  }
-
-  addSubdirectory(subdirectoryId: string) {
-    if (!this.subdirectories.includes(subdirectoryId))
-      this.subdirectories.push(subdirectoryId);
-  }
-
-  removeSubdirectory(subdirectoryId: string) {
-    this.subdirectories = this.subdirectories.filter(
-      (d) => d !== subdirectoryId
-    );
   }
 }
 

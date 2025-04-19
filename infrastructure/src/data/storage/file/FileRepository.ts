@@ -7,6 +7,10 @@ import { pipeline } from "stream/promises";
 import { Readable } from "stream";
 
 class FileRepository extends StorageRepository implements IFileRepository {
+  get dir(): string {
+    return this.dir;
+  }
+
   async saveStream(pathname: string, readableStream: Readable): Promise<void> {
     if (await super.exists(pathname)) throw new FileAlreadyExistsError();
 

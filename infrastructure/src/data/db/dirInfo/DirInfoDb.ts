@@ -8,8 +8,6 @@ const dirInfoDbSchema = new mongoose.Schema({
     ref: "Storage",
     required: true,
   },
-  files: [{ type: mongoose.Schema.Types.ObjectId, ref: "FileInfo" }],
-  subdirectories: [{ type: mongoose.Schema.Types.ObjectId, ref: "DirInfo" }],
   parent: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "DirInfo",

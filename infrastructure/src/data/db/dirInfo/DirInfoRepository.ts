@@ -3,29 +3,59 @@ import DirInfoDb from "../dirInfo/DirInfoDb";
 import IDirInfoRepository from "../../../../../core/src/repositories/IDirInfoRepository";
 import DirInfo from "../../../../../core/src/entities/DirInfo";
 import DirInfoAlreadyExistsError from "./errors/DirInfoAlreadyExistsError";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import FileInfoDb from "../fileInfo/FileInfoDb";
 
 class DirInfoRepository implements IDirInfoRepository {
+  async getRecursiveCounts(
+    id: string
+  ): Promise<{ fileCount: number; dirCount: number }> {
+    const allDirIds = await this._getAllSubdirectoryIds(this._toObjectId(id));
+    allDirIds.push(new Types.ObjectId(id));
+
+    const [fileCount, dirCount] = await Promise.all([
+      FileInfoDb.countDocuments({ parent: { $in: allDirIds } }),
+      DirInfoDb.countDocuments({
+        _id: { $in: allDirIds },
+        parent: { $exists: true, $ne: null },
+      }),
+    ]);
+
+    return { fileCount, dirCount };
+  }
+
+  private async _getAllSubdirectoryIds(
+    dirId: Types.ObjectId
+  ): Promise<Types.ObjectId[]> {
+    const result = await DirInfoDb.aggregate([
+      { $match: { _id: dirId } },
+      {
+        $graphLookup: {
+          from: "dirinfos",
+          startWith: "$_id",
+          connectFromField: "_id",
+          connectToField: "parent",
+          as: "allSubDirs",
+          depthField: "depth",
+        },
+      },
+      { $unwind: "$allSubDirs" },
+      { $project: { _id: "$allSubDirs._id" } },
+    ]).exec();
+
+    return result.map((doc) => doc._id);
+  }
+
   async getSize(id: string): Promise<number> {
-    let dirInfoDb: any;
-
-    try {
-      dirInfoDb = await DirInfoDb.findById(id)
-        .populate("files")
-        .populate("subdirectories");
-    } catch {
-      throw new DirInfoNotFoundError();
-    }
-
-    if (!dirInfoDb) throw new DirInfoNotFoundError();
-
     let totalSize = 0;
 
-    for (const file of dirInfoDb.files) totalSize += file.size;
+    const files = await FileInfoDb.find({ parent: id }).select("size").exec();
+    totalSize += files.reduce((sum, file) => sum + file.size, 0);
 
-    for (const subDir of dirInfoDb.subdirectories)
-      totalSize += await this.getSize(subDir._id.toString());
+    const subDirs = await DirInfoDb.find({ parent: id }).select("_id").exec();
+    for (const dir of subDirs) {
+      totalSize += await this.getSize(dir._id.toString());
+    }
 
     return totalSize;
   }
@@ -67,7 +97,7 @@ class DirInfoRepository implements IDirInfoRepository {
         parent,
       });
 
-      return map(dirInfoDb);
+      return this._toDomainEntity(dirInfoDb);
     } catch (error: any) {
       if (error.code === 11000) throw new DirInfoAlreadyExistsError();
       else throw error;
@@ -75,12 +105,11 @@ class DirInfoRepository implements IDirInfoRepository {
   }
 
   async update(dirInfo: DirInfo): Promise<DirInfo> {
-    const { id, name, files, subdirectories, parent } = dirInfo;
+    const { id, name, parent } = dirInfo;
 
     const updatedData = {
       name,
-      files,
-      subdirectories,
+
       parent,
     };
 
@@ -93,7 +122,7 @@ class DirInfoRepository implements IDirInfoRepository {
       } else {
         await DirInfoDb.updateOne({ _id: id }, { $set: updatedData });
       }
-    } catch {
+    } catch (error: any) {
       throw new DirInfoNotFoundError();
     }
 
@@ -106,26 +135,14 @@ class DirInfoRepository implements IDirInfoRepository {
 
       if (!dirInfoDb) throw new DirInfoNotFoundError();
 
-      return map(dirInfoDb);
+      return this._toDomainEntity(dirInfoDb);
     } catch {
       throw new DirInfoNotFoundError();
     }
   }
 
-  async delete(id: string, recursive: boolean = false): Promise<DirInfo> {
+  async delete(id: string): Promise<DirInfo> {
     const dirInfo = await this.get(id);
-
-    if (recursive) {
-      const subdirectories = await DirInfoDb.find({ parent: id }).populate(
-        "files"
-      );
-
-      for (const subdirectory of subdirectories)
-        await this.delete(subdirectory._id.toString(), true);
-
-      for (const fileId of dirInfo.files)
-        await FileInfoDb.findByIdAndDelete(fileId);
-    }
 
     await DirInfoDb.deleteOne({ _id: id });
 
@@ -135,30 +152,48 @@ class DirInfoRepository implements IDirInfoRepository {
   async getAll(): Promise<DirInfo[]> {
     const dirInfosDb = await DirInfoDb.find();
 
-    return Promise.all(dirInfosDb.map((d) => map(d)));
+    return Promise.all(dirInfosDb.map(this._toDomainEntity));
   }
-}
 
-async function map(dirInfoDb: any) {
-  const dirInfo = new DirInfo(
-    dirInfoDb.name,
-    dirInfoDb.uploadAt,
-    dirInfoDb.storage.toString(),
-    dirInfoDb.parent?.toString(),
-    dirInfoDb._id.toString()
-  );
+  async find(query: { [key: string]: any }): Promise<DirInfo[]> {
+    const processedQuery = this._processQuery(query);
 
-  dirInfo.files = [
-    ...dirInfoDb.files.map((f: mongoose.Types.ObjectId) => f.toString()),
-  ];
+    const docs = await DirInfoDb.find(processedQuery).lean().exec();
 
-  dirInfo.subdirectories = [
-    ...dirInfoDb.subdirectories.map((d: mongoose.Types.ObjectId) =>
-      d.toString()
-    ),
-  ];
+    return docs.map(this._toDomainEntity);
+  }
 
-  return dirInfo;
+  async count(query: { [key: string]: any }): Promise<number> {
+    const processedQuery = this._processQuery(query);
+    return DirInfoDb.countDocuments(processedQuery).exec();
+  }
+
+  private _toObjectId(id: string | Types.ObjectId): Types.ObjectId {
+    return typeof id === "string" ? new Types.ObjectId(id) : id;
+  }
+
+  private _toDomainEntity(dbDoc: any): DirInfo {
+    return new DirInfo(
+      dbDoc.name,
+      dbDoc.uploadAt,
+      dbDoc.storage.toString(),
+      dbDoc.parent?.toString(),
+      dbDoc._id.toString()
+    );
+  }
+
+  private _processQuery(query: { [key: string]: any }): { [key: string]: any } {
+    const processed = { ...query };
+
+    if (processed.parent) processed.parent = this._toObjectId(processed.parent);
+
+    if (processed.storage)
+      processed.storage = this._toObjectId(processed.storage);
+
+    if (processed._id) processed._id = this._toObjectId(processed._id);
+
+    return processed;
+  }
 }
 
 export default DirInfoRepository;

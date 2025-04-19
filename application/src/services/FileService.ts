@@ -7,6 +7,8 @@ import MoveCollisionError from "../errors/MoveCollisionError";
 import { Readable } from "stream";
 import RenameCollisionError from "../errors/RenameCollisionError";
 import IFileLinkRepository from "../../../core/src/repositories/IFileLinkRepository";
+import CopyCollisionError from "../errors/CopyCollisionError";
+import CreateCollisionError from "../errors/CreateCollisionError";
 
 export class FileService implements IFileService {
   constructor(
@@ -16,10 +18,38 @@ export class FileService implements IFileService {
     private readonly _fileLinkRepository: IFileLinkRepository
   ) {}
 
-  async getAllByStorageId(id: string): Promise<FileInfo[]> {
-    const fileInfos = await this._fileInfoRepository.getAll();
+  private async _checkNameCollision(
+    name: string,
+    parentId: string | undefined,
+    storageId: string,
+    operationType: "move" | "copy" | "rename" | "create"
+  ): Promise<void> {
+    const existingNames = await this._fileInfoRepository.find({
+      name,
+      parent: parentId,
+      storage: storageId,
+    });
 
-    return fileInfos.filter((f) => f.storage === id);
+    if (existingNames.length > 0) {
+      switch (operationType) {
+        case "move":
+          throw new MoveCollisionError();
+        case "copy":
+          throw new CopyCollisionError();
+        case "create":
+          throw new CreateCollisionError();
+        case "rename":
+          throw new RenameCollisionError();
+      }
+    }
+  }
+
+  private _getFilePath(file: FileInfo): string {
+    return `/${file.storage}/${file.id}`;
+  }
+
+  async getAllByStorageId(storageId: string): Promise<FileInfo[]> {
+    return this._fileInfoRepository.find({ storage: storageId });
   }
 
   async get(id: string): Promise<FileInfo> {
@@ -27,86 +57,31 @@ export class FileService implements IFileService {
   }
 
   async rename(id: string, name: string): Promise<FileInfo> {
-    let file = await this._fileInfoRepository.get(id);
+    const file = await this._fileInfoRepository.get(id);
 
-    if (file.parent) {
-      const parent = await this._dirInfoRepository.get(file.parent);
-
-      for (let childId of parent.files) {
-        const child = await this._fileInfoRepository.get(childId);
-        if (child.name === name) throw new RenameCollisionError();
-      }
-    } else {
-      let rootChild = await this._fileInfoRepository.getAll();
-      rootChild = rootChild.filter(
-        (f) => f.storage === file.storage && !f.parent
-      );
-
-      for (let child of rootChild) {
-        if (child.name === name) throw new RenameCollisionError();
-      }
+    if (file.name !== name) {
+      await this._checkNameCollision(name, file.parent, file.storage, "rename");
+      file.name = name;
+      await this._fileInfoRepository.update(file);
     }
-
-    const oldPathname = await this._fileInfoRepository.getPathname(id);
-
-    file.name = name;
-
-    await this._fileInfoRepository.update(file);
-
-    const newPathname = await this._fileInfoRepository.getPathname(id);
-
-    await this._fileRepository.move(oldPathname, newPathname);
 
     return file;
   }
 
   async move(id: string, destinationId?: string): Promise<FileInfo> {
-    let file = await this._fileInfoRepository.get(id);
+    const file = await this._fileInfoRepository.get(id);
 
-    if (destinationId) {
-      const parent = await this._dirInfoRepository.get(destinationId);
-
-      for (let childId of parent.files) {
-        const child = await this._fileInfoRepository.get(childId);
-        if (child.name === file.name) throw new MoveCollisionError();
-      }
-    } else {
-      let rootChild = await this._fileInfoRepository.getAll();
-      rootChild = rootChild.filter(
-        (f) => f.storage === file.storage && !f.parent
+    if (file.parent !== destinationId) {
+      await this._checkNameCollision(
+        file.name,
+        destinationId,
+        file.storage,
+        "move"
       );
 
-      for (let child of rootChild)
-        if (child.name === file.name) throw new MoveCollisionError();
-    }
-
-    const oldPathname = await this._fileInfoRepository.getPathname(file.id);
-
-    if (file.parent) {
-      const parent = await this._dirInfoRepository.get(file.parent);
-
-      parent.removeFile(file.id);
-
-      await this._dirInfoRepository.update(parent);
-    }
-
-    if (destinationId) {
-      const destination = await this._dirInfoRepository.get(destinationId);
-
       file.parent = destinationId;
-
-      destination.addFile(file.id);
-
-      await this._dirInfoRepository.update(destination);
-    } else {
-      file.parent = undefined;
+      await this._fileInfoRepository.update(file);
     }
-
-    await this._fileInfoRepository.update(file);
-
-    const newPathname = await this._fileInfoRepository.getPathname(file.id);
-
-    await this._fileRepository.move(oldPathname, newPathname);
 
     return file;
   }
@@ -114,24 +89,14 @@ export class FileService implements IFileService {
   async copy(id: string, parentId?: string): Promise<FileInfo> {
     let sourceFile = await this._fileInfoRepository.get(id);
 
-    if (parentId) {
-      const parent = await this._dirInfoRepository.get(parentId);
+    await this._checkNameCollision(
+      sourceFile.name,
+      parentId,
+      sourceFile.storage,
+      "copy"
+    );
 
-      for (let childId of parent.files) {
-        const child = await this._fileInfoRepository.get(childId);
-        if (child.name === sourceFile.name) throw new MoveCollisionError();
-      }
-    } else {
-      let rootChild = await this._fileInfoRepository.getAll();
-      rootChild = rootChild.filter(
-        (f) => f.storage === sourceFile.storage && !f.parent
-      );
-
-      for (let child of rootChild)
-        if (child.name === sourceFile.name) throw new MoveCollisionError();
-    }
-
-    let newFile = new FileInfo(
+    const newFile = new FileInfo(
       sourceFile.name,
       new Date(),
       sourceFile.size,
@@ -139,70 +104,40 @@ export class FileService implements IFileService {
       parentId
     );
 
-    newFile = await this._fileInfoRepository.add(newFile);
+    const createdFile = await this._fileInfoRepository.add(newFile);
 
-    let pathname = `/${sourceFile.storage}/${newFile.name}`;
-
-    if (parentId) {
-      const parentDir = await this._dirInfoRepository.get(parentId);
-
-      parentDir.addFile(newFile.id);
-
-      await this._dirInfoRepository.update(parentDir);
-
-      const parentPath = await this._dirInfoRepository.getPath(parentDir.id);
-
-      pathname = `/${parentPath}/${newFile.name}`;
-    }
-
-    const sourceFilePathname = await this._fileInfoRepository.getPathname(
-      sourceFile.id
+    await this._fileRepository.copy(
+      this._getFilePath(sourceFile),
+      this._getFilePath(createdFile)
     );
 
-    await this._fileRepository.copy(sourceFilePathname, pathname);
-
-    return newFile;
+    return createdFile;
   }
 
   async overwrite(id: string, data: Buffer): Promise<FileInfo> {
     const file = await this._fileInfoRepository.get(id);
-
     file.updateAt = new Date();
     file.size = data.length;
 
-    const pathname = await this._fileInfoRepository.getPathname(file.id);
-
     await this._fileInfoRepository.update(file);
-
-    await this._fileRepository.overwrite(pathname, data);
+    await this._fileRepository.overwrite(this._getFilePath(file), data);
 
     return file;
   }
 
   async delete(id: string): Promise<FileInfo> {
-    const pathname = await this._fileInfoRepository.getPathname(id);
-
     const fileInfo = await this._fileInfoRepository.delete(id);
+
     await this._fileLinkRepository.deleteByFileInfoId(id);
 
-    if (fileInfo.parent) {
-      const dirInfo = await this._dirInfoRepository.get(fileInfo.parent);
-
-      dirInfo.removeFile(fileInfo.id);
-
-      await this._dirInfoRepository.update(dirInfo);
-    }
-
-    await this._fileRepository.rm(pathname);
+    await this._fileRepository.rm(this._getFilePath(fileInfo));
 
     return fileInfo;
   }
 
   async download(id: string): Promise<[FileInfo, string]> {
     const fileInfo = await this._fileInfoRepository.get(id);
-
-    const pathname = await this._fileInfoRepository.getPathname(fileInfo.id);
-
+    const pathname = `/${fileInfo.storage}/${fileInfo.id}`;
     return [fileInfo, pathname];
   }
 
@@ -213,22 +148,22 @@ export class FileService implements IFileService {
     size: number,
     parentId?: string
   ): Promise<FileInfo> {
-    let file = new FileInfo(filename, new Date(), size, storageId, parentId);
+    await this._checkNameCollision(filename, parentId, storageId, "create");
 
-    file = await this._fileInfoRepository.add(file);
+    const file = new FileInfo(filename, new Date(), size, storageId, parentId);
+    const createdFile = await this._fileInfoRepository.add(file);
 
-    if (parentId) {
-      const parent = await this._dirInfoRepository.get(parentId);
-
-      parent.addFile(file.id);
-
-      await this._dirInfoRepository.update(parent);
+    try {
+      await this._fileRepository.saveStream(
+        this._getFilePath(createdFile),
+        readableStream
+      );
+      return createdFile;
+    } catch (error) {
+      await this._fileInfoRepository.delete(createdFile.id);
+      console.log(error);
     }
 
-    const path = await this._fileInfoRepository.getPathname(file.id);
-
-    await this._fileRepository.saveStream(path, readableStream);
-
-    return file;
+    return createdFile;
   }
 }

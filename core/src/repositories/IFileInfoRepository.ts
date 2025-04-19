@@ -8,4 +8,6 @@ export default interface IFileInfoRepository {
   update(fileInfo: FileInfo): Promise<FileInfo>;
   getPathname(id: string): Promise<string>;
   exists(id: string): Promise<boolean>;
+  count(query: { [key: string]: any }): Promise<number>;
+  find(query: { [key: string]: any }): Promise<FileInfo[]>;
 }
