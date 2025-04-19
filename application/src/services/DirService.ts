@@ -146,7 +146,7 @@ class DirService implements IDirService {
     targetDirId: string
   ): Promise<void> {
     const files = await this._fileInfoRepository.find({
-      parentId: sourceDirId,
+      parent: sourceDirId,
     });
     await Promise.all(
       files.map(async (file) => {
@@ -159,7 +159,6 @@ class DirService implements IDirService {
         );
         const createdFile = await this._fileInfoRepository.add(newFile);
 
-        // Копируем физический файл
         await this._fileRepository.copy(
           this._getFilePath(file),
           this._getFilePath(createdFile)
@@ -167,9 +166,8 @@ class DirService implements IDirService {
       })
     );
 
-    // Рекурсивно копируем поддиректории
     const subDirs = await this._dirInfoRepository.find({
-      parentId: sourceDirId,
+      parent: sourceDirId,
     });
     await Promise.all(
       subDirs.map(async (dir) => {
