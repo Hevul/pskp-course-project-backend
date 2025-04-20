@@ -8,6 +8,8 @@ class FileLink {
     public fileInfoId: string,
     public friends: string[],
     public isPublic: boolean = true,
+    public createAt: Date,
+    public downloadCount: number,
     public id: string = ""
   ) {}
 

@@ -1,5 +1,6 @@
 import FileInfo from "../../../core/src/entities/FileInfo";
 import FileLink from "../../../core/src/entities/FileLink";
+import { FileLinkFullInfoDTO } from "../dtos/FileLinkFullInfoDTO";
 
 export default interface IFileLinkService {
   generate(
@@ -18,5 +19,9 @@ export default interface IFileLinkService {
   removeAllFriends(id: string): Promise<FileLink>;
   setPublicity(id: string, publicity: boolean): Promise<void>;
   delete(id: string): Promise<FileLink>;
-  checkAccess(link: string, userId: string): Promise<void>;
+  getFullInfo(id: string): Promise<FileLinkFullInfoDTO>;
+  checkAccess(
+    identifier: string | { id: string } | { link: string },
+    userId: string
+  ): Promise<void>;
 }

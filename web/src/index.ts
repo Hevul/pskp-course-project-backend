@@ -6,6 +6,7 @@ import extendResponse from "./middlewares/utils/extendResponse";
 import cookieParser from "cookie-parser";
 import box from "./box";
 import { setupTempFileCleanup } from "./utils/cleaner";
+import path from "path";
 
 connect(config.dbConnectionString);
 
@@ -24,6 +25,7 @@ app
       credentials: true,
     })
   )
+  .use(express.static(path.join(__dirname, "../public")))
   .use("/", (req, res, next) => {
     console.log(req.url);
     next();

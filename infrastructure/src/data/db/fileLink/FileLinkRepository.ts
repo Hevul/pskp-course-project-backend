@@ -32,12 +32,14 @@ class FileLinkRepository implements IFileLinkRepository {
   }
 
   async update(fileLink: FileLink): Promise<FileLink> {
-    const { id, link, friends, isPublic } = fileLink;
+    const { id, link, friends, isPublic, createAt, downloadCount } = fileLink;
 
     const updatedData = {
       link,
       friends,
       isPublic,
+      createAt,
+      downloadCount,
     };
 
     try {
@@ -110,7 +112,15 @@ class FileLinkRepository implements IFileLinkRepository {
   }
 
   async add(fileLink: FileLink): Promise<FileLink> {
-    const { link, ownerId, fileInfoId, friends, isPublic } = fileLink;
+    const {
+      link,
+      ownerId,
+      fileInfoId,
+      friends,
+      isPublic,
+      createAt,
+      downloadCount,
+    } = fileLink;
 
     try {
       const fileLinkDb = await FileLinkDb.create({
@@ -119,6 +129,8 @@ class FileLinkRepository implements IFileLinkRepository {
         file: fileInfoId,
         friends,
         isPublic,
+        createAt,
+        downloadCount,
       });
 
       return map(fileLinkDb);
@@ -130,7 +142,8 @@ class FileLinkRepository implements IFileLinkRepository {
 }
 
 function map(dbDocument: mongoose.Document) {
-  const { _id, link, owner, file, isPublic, friends } = dbDocument.toObject();
+  const { _id, link, owner, file, isPublic, friends, createAt, downloadCount } =
+    dbDocument.toObject();
 
   return new FileLink(
     link,
@@ -138,6 +151,8 @@ function map(dbDocument: mongoose.Document) {
     file.toString(),
     friends.map((f: mongoose.Types.ObjectId) => f.toString()),
     isPublic,
+    createAt,
+    downloadCount,
     _id.toString()
   );
 }

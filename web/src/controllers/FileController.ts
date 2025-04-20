@@ -5,6 +5,7 @@ import config from "../config";
 import IFileLinkService from "../../../application/src/interfaces/IFileLinkService";
 import fs, { createReadStream } from "fs";
 import path from "path";
+import mime from "mime";
 
 export class FileController {
   constructor(
@@ -61,6 +62,39 @@ export class FileController {
     const fullPath = `${config.uploadDir}${pathname}`;
 
     res.download(fullPath);
+  };
+
+  view = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    try {
+      const { id } = req.params;
+
+      const [fileMeta, relativePath] = await this._fileService.download(id);
+      const filePath = path.join(config.uploadDir, relativePath);
+
+      const mimeType = mime.lookup(fileMeta.name) || "application/octet-stream";
+
+      const encodedFilename = encodeURIComponent(fileMeta.name);
+
+      res.set({
+        "Content-Type": mimeType,
+        "Content-Disposition": `inline; filename=${encodedFilename}}`,
+        "Cache-Control": "public, max-age=3600",
+      });
+
+      const fileStream = fs.createReadStream(filePath);
+      fileStream.pipe(res);
+
+      fileStream.on("error", (err) => {
+        console.error("File stream error:", err);
+        res.status(500).end();
+      });
+    } catch (error) {
+      next(error);
+    }
   };
 
   upload = async (

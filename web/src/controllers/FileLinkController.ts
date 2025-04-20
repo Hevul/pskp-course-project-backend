@@ -21,6 +21,20 @@ class FileLinkController {
     res.json(links);
   };
 
+  getFullInfo = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    const user = req.user!;
+    const id = req.params.id;
+
+    await this._fileLinkService.checkAccess({ id }, user.id);
+    const fullInfo = await this._fileLinkService.getFullInfo(id);
+
+    res.status(200).json({ fullInfo });
+  };
+
   getByLink = async (
     req: Request,
     res: Response,

@@ -3,6 +3,7 @@ import FileLink from "../../../core/src/entities/FileLink";
 import IFileInfoRepository from "../../../core/src/repositories/IFileInfoRepository";
 import IFileLinkRepository from "../../../core/src/repositories/IFileLinkRepository";
 import IUserRepository from "../../../core/src/repositories/IUserRepository";
+import { FileLinkFullInfoDTO } from "../dtos/FileLinkFullInfoDTO";
 import LinkAccessDeniedError from "../errors/LinkAccessDeniedError";
 import LinkAlreadyExistsError from "../errors/LinkAlreadyExists";
 import IFileLinkService from "../interfaces/IFileLinkService";
@@ -16,8 +17,20 @@ export class FileLinkService implements IFileLinkService {
     private readonly _hashProvider: IHashProvider
   ) {}
 
-  async checkAccess(link: string, userId: string): Promise<void> {
-    const fileLink = await this._fileLinkRepository.getByLink(link);
+  async checkAccess(
+    identifier: string | { id: string } | { link: string },
+    userId: string
+  ): Promise<void> {
+    let fileLink: FileLink;
+    if (typeof identifier === "string") {
+      fileLink = await this._fileLinkRepository.getByLink(identifier);
+    } else if ("id" in identifier) {
+      fileLink = await this._fileLinkRepository.get(identifier.id);
+    } else if ("link" in identifier) {
+      fileLink = await this._fileLinkRepository.getByLink(identifier.link);
+    } else {
+      throw new Error("Invalid identifier type");
+    }
 
     if (
       fileLink.isPublic ||
@@ -25,9 +38,23 @@ export class FileLinkService implements IFileLinkService {
       fileLink.friends.includes(userId)
     ) {
       return;
-    } else {
-      throw new LinkAccessDeniedError();
     }
+
+    throw new LinkAccessDeniedError();
+  }
+
+  async getFullInfo(id: string): Promise<FileLinkFullInfoDTO> {
+    const link = await this._fileLinkRepository.get(id);
+    const file = await this._fileInfoRepository.get(link.fileInfoId);
+    const user = await this._userRepository.getById(link.ownerId);
+
+    return {
+      filename: file.name,
+      size: file.size,
+      owner: user.login,
+      createAt: link.createAt,
+      downloadCount: link.downloadCount,
+    };
   }
 
   async getById(id: string): Promise<FileLink> {
@@ -102,7 +129,15 @@ export class FileLinkService implements IFileLinkService {
     if (exists) throw new LinkAlreadyExistsError();
 
     const link = this._hashProvider.generate(`${ownerId}.${fileInfoId}`);
-    let fileLink = new FileLink(link, ownerId, fileInfoId, friends, isPublic);
+    let fileLink = new FileLink(
+      link,
+      ownerId,
+      fileInfoId,
+      friends,
+      isPublic,
+      new Date(),
+      0
+    );
     fileLink = await this._fileLinkRepository.add(fileLink);
 
     return fileLink;
@@ -113,6 +148,9 @@ export class FileLinkService implements IFileLinkService {
     const fileInfo = await this._fileInfoRepository.get(fileLink.fileInfoId);
 
     const pathname = `/${fileInfo.storage}/${fileInfo.id}`;
+
+    fileLink.downloadCount++;
+    await this._fileLinkRepository.update(fileLink);
 
     return [fileInfo, pathname];
   }

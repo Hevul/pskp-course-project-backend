@@ -11,6 +11,8 @@ const fileLinkDbSchema = new mongoose.Schema({
   },
   friends: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
   isPublic: { type: Boolean, required: true },
+  createAt: { type: Date, required: true },
+  downloadCount: { type: Number, required: true },
 });
 
 const FileLinkDb = mongoose.model("FileLink", fileLinkDbSchema);

@@ -12,3 +12,4 @@ sandbox/
 
 web/config.json
 web/test.http
+web/public/

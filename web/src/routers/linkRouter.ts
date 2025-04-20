@@ -27,6 +27,12 @@ const createRouter = (
       fileLinkController.get
     )
     .get(
+      "/get-full-info/:id",
+      authenticate,
+      validateRequest,
+      fileLinkController.getFullInfo
+    )
+    .get(
       "/get-by-fileinfo-id/:id",
       authenticate,
       authorize({

@@ -32,6 +32,18 @@ const createRouter = (
       fileController.get
     )
     .get(
+      "/view/:id",
+      authenticate,
+      authorize({
+        entityTypes: {
+          id: "file",
+        },
+        idLocations: ["params"],
+        idFields: ["id"],
+      }),
+      fileController.view
+    )
+    .get(
       "/get-all-by-storage/:storageId/:parentId?",
       authenticate,
       authorize({
