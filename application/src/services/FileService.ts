@@ -1,14 +1,14 @@
 import IFileService from "../interfaces/IFileService";
 import IFileInfoRepository from "../../../core/src/repositories/IFileInfoRepository";
-import IDirInfoRepository from "../../../core/src/repositories/IDirInfoRepository";
 import IFileRepository from "../../../core/src/repositories/IFileRepository";
 import FileInfo from "../../../core/src/entities/FileInfo";
 import MoveCollisionError from "../errors/MoveCollisionError";
-import { Readable } from "stream";
+import { PassThrough, Readable } from "stream";
 import RenameCollisionError from "../errors/RenameCollisionError";
 import IFileLinkRepository from "../../../core/src/repositories/IFileLinkRepository";
 import CopyCollisionError from "../errors/CopyCollisionError";
 import CreateCollisionError from "../errors/CreateCollisionError";
+import archiver from "archiver";
 
 export class FileService implements IFileService {
   constructor(
@@ -159,6 +159,50 @@ export class FileService implements IFileService {
     const fileInfo = await this._fileInfoRepository.get(id);
     const pathname = `/${fileInfo.storage}/${fileInfo.id}`;
     return [fileInfo, pathname];
+  }
+
+  async downloadMultiple(ids: string[]): Promise<{
+    archiveName: string;
+    fileStream: Readable;
+    archiveSize: number;
+  }> {
+    const archiveName = `files-${Date.now()}.zip`;
+    let archiveSize = 0;
+    const archive = archiver("zip", {
+      zlib: { level: 5 },
+      highWaterMark: 1024 * 1024,
+    });
+    const passThrough = new PassThrough();
+
+    archive.pipe(passThrough);
+
+    archive.append("", { name: ".init" });
+
+    for (const id of ids) {
+      const file = await this._fileInfoRepository.get(id);
+      archiveSize += file.size;
+    }
+
+    (async () => {
+      for (const id of ids) {
+        try {
+          const file = await this._fileInfoRepository.get(id);
+          const pathname = `/${file.storage}/${file.id}`;
+          const fileStream = await this._fileRepository.getStream(pathname);
+
+          archive.append(fileStream, { name: file.name });
+        } catch (err) {
+          console.error("Ошибка при добавлении файла в архив", err);
+        }
+      }
+      archive.finalize();
+    })();
+
+    archive.on("error", (err) => {
+      passThrough.destroy(err);
+    });
+
+    return { archiveName, fileStream: passThrough, archiveSize };
   }
 
   async upload(

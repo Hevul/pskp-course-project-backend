@@ -10,6 +10,11 @@ export default interface IFileService {
     parentId?: string
   ): Promise<FileInfo>;
   download(pathname: string): Promise<[FileInfo, string]>;
+  downloadMultiple(ids: string[]): Promise<{
+    archiveName: string;
+    fileStream: Readable;
+    archiveSize: number;
+  }>;
   delete(id: string): Promise<FileInfo>;
   copy(id: string, destinationId?: string): Promise<FileInfo>;
   move(id: string, destinationId?: string): Promise<FileInfo>;

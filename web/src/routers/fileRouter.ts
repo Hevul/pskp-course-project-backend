@@ -98,6 +98,18 @@ const createRouter = (
       validateRequest,
       fileController.download
     )
+    .get(
+      "/download-many",
+      authenticate,
+      authorize({
+        entityTypes: {
+          fileIds: "file",
+        },
+        idLocations: ["query"],
+        idFields: ["fileIds"],
+      }),
+      fileController.downloadMany
+    )
     .delete(
       "/delete",
       authenticate,

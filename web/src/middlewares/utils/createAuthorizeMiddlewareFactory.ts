@@ -26,7 +26,7 @@ export const createAuthorizeMiddlewareFactory = (
 
         options.idLocations?.forEach((location) => {
           options.idFields?.forEach((field) => {
-            const value = req[location]?.[field];
+            let value = req[location]?.[field];
             const entityType =
               options.entityTypes?.[field] ?? options.defaultEntityType;
 
@@ -35,6 +35,16 @@ export const createAuthorizeMiddlewareFactory = (
             }
 
             if (value) {
+              if (location === "query" && typeof value === "string") {
+                try {
+                  value = JSON.parse(value);
+                } catch (e) {
+                  throw new Error(
+                    `Invalid JSON format for query parameter ${field}`
+                  );
+                }
+              }
+
               if (Array.isArray(value)) {
                 entitiesToCheck.push(
                   ...value.map((id) => ({ id, type: entityType }))
@@ -51,8 +61,20 @@ export const createAuthorizeMiddlewareFactory = (
           return;
         }
 
-        for (const { id, type } of entitiesToCheck) {
-          await authService.authorizeRequest(req.user.id, [id], type);
+        const groupedEntities: Record<EntityType, string[]> = {} as any;
+        entitiesToCheck.forEach(({ id, type }) => {
+          if (!groupedEntities[type]) {
+            groupedEntities[type] = [];
+          }
+          groupedEntities[type].push(id);
+        });
+
+        for (const [type, ids] of Object.entries(groupedEntities)) {
+          await authService.authorizeRequest(
+            req.user.id,
+            ids,
+            type as EntityType
+          );
         }
 
         next();

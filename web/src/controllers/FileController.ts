@@ -57,11 +57,48 @@ export class FileController {
   ): Promise<void> => {
     const id = req.params.id;
 
-    const [_, pathname] = await this._fileService.download(id);
+    const [file, pathname] = await this._fileService.download(id);
+
+    const encodedFilename = encodeURIComponent(file.name)
+      .replace(/['()]/g, escape)
+      .replace(/\*/g, "%2A")
+      .replace(/%(?:7C|60|5E)/g, unescape);
+
+    res.setHeader("Content-Type", "application/octet-stream");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename*=UTF-8''${encodedFilename}`
+    );
+    res.setHeader("Content-Length", file.size);
+    res.setHeader("Cache-Control", "no-cache");
 
     const fullPath = `${config.uploadDir}${pathname}`;
+    const readStream = createReadStream(fullPath);
 
-    res.download(fullPath);
+    readStream.pipe(res);
+  };
+
+  downloadMany = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    const fileIds = req.query.fileIds as string;
+
+    const parsedIds = JSON.parse(fileIds);
+
+    const { archiveName, fileStream, archiveSize } =
+      await this._fileService.downloadMultiple(parsedIds);
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${archiveName}"`
+    );
+    res.setHeader("Content-Length", archiveSize);
+    res.setHeader("Cache-Control", "no-cache");
+
+    fileStream.pipe(res);
   };
 
   view = async (
