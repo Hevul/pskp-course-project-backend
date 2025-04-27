@@ -1,5 +1,6 @@
 import DirInfo from "../../../core/src/entities/DirInfo";
 import { DirInfoFullInfoDTO } from "../dtos/DirInfoFullInfoDTO";
+import { Readable } from "stream";
 
 export default interface IDirService {
   getAllByStorageId(storageId: string): Promise<DirInfo[]>;
@@ -10,4 +11,5 @@ export default interface IDirService {
   getSize(id: string): Promise<number>;
   copy(id: string, destinationId?: string): Promise<DirInfo>;
   move(id: string, destinationId?: string): Promise<DirInfo>;
+  download(id: string): Promise<{ stream: Readable; size: number }>;
 }

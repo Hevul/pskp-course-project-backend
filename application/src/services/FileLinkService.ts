@@ -3,6 +3,7 @@ import FileLink from "../../../core/src/entities/FileLink";
 import IFileInfoRepository from "../../../core/src/repositories/IFileInfoRepository";
 import IFileLinkRepository from "../../../core/src/repositories/IFileLinkRepository";
 import IUserRepository from "../../../core/src/repositories/IUserRepository";
+import IUserStorageRepository from "../../../core/src/repositories/IUserStorageRepository";
 import { FileLinkFullInfoDTO } from "../dtos/FileLinkFullInfoDTO";
 import LinkAccessDeniedError from "../errors/LinkAccessDeniedError";
 import LinkAlreadyExistsError from "../errors/LinkAlreadyExists";
@@ -11,6 +12,7 @@ import IHashProvider from "../interfaces/IHashProvider";
 
 export class FileLinkService implements IFileLinkService {
   constructor(
+    private readonly _userStorageRepository: IUserStorageRepository,
     private readonly _fileLinkRepository: IFileLinkRepository,
     private readonly _fileInfoRepository: IFileInfoRepository,
     private readonly _userRepository: IUserRepository,
@@ -47,6 +49,12 @@ export class FileLinkService implements IFileLinkService {
     const link = await this._fileLinkRepository.get(id);
     const file = await this._fileInfoRepository.get(link.fileInfoId);
     const user = await this._userRepository.getById(link.ownerId);
+    const path = await this._fileInfoRepository.getPathname(file.id);
+    const storage = await this._userStorageRepository.get(file.storage);
+
+    const pathParts = path.split("/");
+    if (pathParts.length > 1) pathParts[1] = storage.name;
+    const clearedPath = pathParts.join("/");
 
     return {
       filename: file.name,
@@ -54,6 +62,7 @@ export class FileLinkService implements IFileLinkService {
       owner: user.login,
       createAt: link.createAt,
       downloadCount: link.downloadCount,
+      path: clearedPath,
     };
   }
 

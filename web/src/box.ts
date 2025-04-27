@@ -49,6 +49,7 @@ const dirService = new DirService(
   fileRepository
 );
 const fileLinkService = new FileLinkService(
+  userStorageRepository,
   fileLinkRepository,
   fileInfoRepository,
   userRepository,
@@ -109,7 +110,7 @@ const authRouter = createAuthRouter(
 const linkRouter = createLinkRouter(
   createAuthenticate(),
   authorizeMiddlewareFactory,
-  new FileLinkController(fileLinkService, userService)
+  new FileLinkController(fileLinkService)
 );
 
 const box = {

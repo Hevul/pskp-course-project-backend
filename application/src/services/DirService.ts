@@ -11,6 +11,9 @@ import FileInfo from "../../../core/src/entities/FileInfo";
 import IFileInfoRepository from "../../../core/src/repositories/IFileInfoRepository";
 import IFileRepository from "../../../core/src/repositories/IFileRepository";
 import RenameCollisionError from "../errors/RenameCollisionError";
+import { finished } from "stream/promises";
+import { Readable, PassThrough } from "stream";
+import archiver from "archiver";
 
 class DirService implements IDirService {
   constructor(
@@ -246,6 +249,83 @@ class DirService implements IDirService {
 
     const dir = new DirInfo(name, new Date(), storageId, parentId);
     return this._dirInfoRepository.add(dir);
+  }
+
+  async download(id: string): Promise<{ stream: Readable; size: number }> {
+    const dir = await this._dirInfoRepository.get(id);
+    const archive = archiver("zip", { zlib: { level: 6 } });
+    const passThrough = new PassThrough();
+
+    let totalSize = 0;
+    let fileCount = 0;
+
+    // Обработчики ошибок
+    archive.on("error", (err) => {
+      console.error("Archive error:", err);
+      passThrough.emit("error", err);
+    });
+
+    archive.pipe(passThrough);
+
+    // Рекурсивная функция добавления файлов и директорий
+    const addFilesToArchive = async (dirId: string, pathPrefix = "") => {
+      const [files, subDirs] = await Promise.all([
+        this._fileInfoRepository.find({ parent: dirId }),
+        this._dirInfoRepository.find({ parent: dirId }),
+      ]);
+
+      // Добавляем файлы текущей директории
+      await Promise.all(
+        files.map(async (file) => {
+          try {
+            const fileStream = await this._fileRepository.getStream(
+              this._getFilePath(file)
+            );
+
+            // Ждём завершения записи файла в архив
+            archive.append(fileStream, {
+              name: `${pathPrefix}${file.name}`,
+            });
+
+            // Увеличиваем общий размер и количество файлов
+            totalSize += file.size;
+            fileCount++;
+
+            // Убедимся, что поток завершён
+            await finished(fileStream);
+          } catch (err) {
+            console.error(`Error adding file ${file.name}:`, err);
+          }
+        })
+      );
+
+      // Рекурсивно обрабатываем поддиректории
+      await Promise.all(
+        subDirs.map(async (subDir) => {
+          await addFilesToArchive(subDir.id, `${pathPrefix}${subDir.name}/`);
+        })
+      );
+    };
+
+    try {
+      // Рекурсивно добавляем все файлы и директории
+      await addFilesToArchive(id, `${dir.name}/`);
+
+      console.log("Pre finalize");
+
+      // Завершаем архив
+      archive.finalize();
+
+      console.log(
+        `Archive created. Files: ${fileCount}, Total size: ${totalSize} bytes`
+      );
+
+      return { stream: passThrough, size: totalSize };
+    } catch (err) {
+      archive.abort();
+      console.error("Failed to create archive:", err);
+      throw err;
+    }
   }
 }
 

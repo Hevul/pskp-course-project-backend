@@ -40,6 +40,18 @@ const createRouter = (
       dirController.getFullInfo
     )
     .post(
+      "/download/:id",
+      authenticate,
+      authorize({
+        entityTypes: {
+          id: "dir",
+        },
+        idLocations: ["params"],
+        idFields: ["id"],
+      }),
+      dirController.download
+    )
+    .post(
       "/create",
       authenticate,
       authorize({

@@ -1,5 +1,4 @@
 import express, { RequestHandler } from "express";
-import multer from "multer";
 import { FileController } from "../controllers/FileController";
 import validateFile from "../middlewares/validators/requireFile";
 import { body, param } from "express-validator";

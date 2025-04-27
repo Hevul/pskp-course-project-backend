@@ -3,6 +3,7 @@ import CreateCollisionError from "../../../../application/src/errors/CreateColli
 import DirectoryMoveInChildError from "../../../../application/src/errors/DirectoryMoveInChildError";
 import DirectoryMoveInItSelfError from "../../../../application/src/errors/DirectoryMoveInItSelfError";
 import MoveCollisionError from "../../../../application/src/errors/MoveCollisionError";
+import RenameCollisionError from "../../../../application/src/errors/RenameCollisionError";
 import DirectoryNameEndsWithDotError from "../../../../core/src/errors/DirectoryNameEndsWithDotError";
 import EmptyFileNameError from "../../../../core/src/errors/EmptyFileNameError";
 import ForbiddenCharactersError from "../../../../core/src/errors/ForbiddenCharactersError";
@@ -96,6 +97,12 @@ const operations: ErrorConfig[] = [
   },
   {
     errorName: MoveCollisionError.name,
+    errorDetails: {
+      msg: "Папка с таким же именем уже существует в выбранной папке!",
+    },
+  },
+  {
+    errorName: RenameCollisionError.name,
     errorDetails: {
       msg: "Папка с таким же именем уже существует в выбранной папке!",
     },

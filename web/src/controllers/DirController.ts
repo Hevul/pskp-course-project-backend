@@ -94,6 +94,24 @@ class DirController {
 
     res.good();
   };
+
+  download = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    const { id } = req.params;
+
+    const { stream, size } = await this._dirService.download(id);
+
+    console.log("finita");
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename="${id}.zip"`);
+    res.setHeader("Content-Length", size);
+
+    stream.pipe(res);
+  };
 }
 
 export default DirController;

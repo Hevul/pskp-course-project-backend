@@ -13,9 +13,13 @@
     "typescript": "^5.7.2"
   },
   "dependencies": {
+    "@types/archiver": "^6.0.3",
     "@types/jsonwebtoken": "^9.0.7",
+    "@types/jszip": "^3.4.0",
+    "archiver": "^7.0.1",
     "inversify": "^7.0.0-alpha.5",
     "jsonwebtoken": "^9.0.2",
+    "jszip": "^3.10.1",
     "reflect-metadata": "^0.2.2"
   }
 }

@@ -1,13 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import IFileLinkService from "../../../application/src/interfaces/IFileLinkService";
-import IUserService from "../../../application/src/interfaces/IUserService";
 import config from "../config";
 
 class FileLinkController {
-  constructor(
-    private readonly _fileLinkService: IFileLinkService,
-    private readonly _userService: IUserService
-  ) {}
+  constructor(private readonly _fileLinkService: IFileLinkService) {}
 
   getAllByOwner = async (
     req: Request,
@@ -16,9 +12,19 @@ class FileLinkController {
   ): Promise<void> => {
     const user = req.user!;
 
-    const links = await this._fileLinkService.getAllByOwnerId(user.id);
+    let links = await this._fileLinkService.getAllByOwnerId(user.id);
 
-    res.json(links);
+    const linksWithFilenames = await Promise.all(
+      links.map(async (l) => {
+        const fullInfo = await this._fileLinkService.getFullInfo(l.id);
+        return {
+          ...l,
+          filename: fullInfo.filename,
+        };
+      })
+    );
+
+    res.json({ links: linksWithFilenames });
   };
 
   getFullInfo = async (
