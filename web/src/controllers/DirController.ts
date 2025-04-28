@@ -102,15 +102,39 @@ class DirController {
   ): Promise<void> => {
     const { id } = req.params;
 
-    const { stream, size } = await this._dirService.download(id);
+    const { fileStream, archiveName } = await this._dirService.download(id);
 
-    console.log("finita");
+    const encodedFilename = encodeURIComponent(archiveName)
+      .replace(/['()]/g, escape)
+      .replace(/\*/g, "%2A")
+      .replace(/%(?:7C|60|5E)/g, unescape);
 
     res.setHeader("Content-Type", "application/zip");
-    res.setHeader("Content-Disposition", `attachment; filename="${id}.zip"`);
-    res.setHeader("Content-Length", size);
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="${encodedFilename}"`
+    );
 
-    stream.pipe(res);
+    fileStream.pipe(res);
+  };
+
+  downloadMany = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    const dirIds = req.query.dirIds as string;
+
+    const parsedIds = JSON.parse(dirIds);
+
+    const { archiveName, fileStream } = await this._dirService.downloadMultiple(
+      parsedIds
+    );
+
+    res.setHeader("Content-Type", "application/zip");
+    res.setHeader("Content-Disposition", `attachment; filename=${archiveName}`);
+
+    fileStream.pipe(res);
   };
 }
 

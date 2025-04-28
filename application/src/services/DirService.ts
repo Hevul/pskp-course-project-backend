@@ -251,81 +251,82 @@ class DirService implements IDirService {
     return this._dirInfoRepository.add(dir);
   }
 
-  async download(id: string): Promise<{ stream: Readable; size: number }> {
-    const dir = await this._dirInfoRepository.get(id);
-    const archive = archiver("zip", { zlib: { level: 6 } });
-    const passThrough = new PassThrough();
-
-    let totalSize = 0;
-    let fileCount = 0;
-
-    // Обработчики ошибок
-    archive.on("error", (err) => {
-      console.error("Archive error:", err);
-      passThrough.emit("error", err);
+  async download(dirId: string): Promise<{
+    fileStream: Readable;
+    archiveName: string;
+  }> {
+    const dir = await this._dirInfoRepository.get(dirId);
+    const archiveName = `${dir.name}.zip`;
+    const archive = archiver("zip", {
+      zlib: { level: 5 },
     });
+    const passThrough = new PassThrough();
 
     archive.pipe(passThrough);
 
-    // Рекурсивная функция добавления файлов и директорий
-    const addFilesToArchive = async (dirId: string, pathPrefix = "") => {
-      const [files, subDirs] = await Promise.all([
-        this._fileInfoRepository.find({ parent: dirId }),
-        this._dirInfoRepository.find({ parent: dirId }),
-      ]);
+    await this._addDirectoryToArchive(dirId, archive, "");
 
-      // Добавляем файлы текущей директории
-      await Promise.all(
-        files.map(async (file) => {
-          try {
-            const fileStream = await this._fileRepository.getStream(
-              this._getFilePath(file)
-            );
+    archive.finalize();
 
-            // Ждём завершения записи файла в архив
-            archive.append(fileStream, {
-              name: `${pathPrefix}${file.name}`,
-            });
-
-            // Увеличиваем общий размер и количество файлов
-            totalSize += file.size;
-            fileCount++;
-
-            // Убедимся, что поток завершён
-            await finished(fileStream);
-          } catch (err) {
-            console.error(`Error adding file ${file.name}:`, err);
-          }
-        })
-      );
-
-      // Рекурсивно обрабатываем поддиректории
-      await Promise.all(
-        subDirs.map(async (subDir) => {
-          await addFilesToArchive(subDir.id, `${pathPrefix}${subDir.name}/`);
-        })
-      );
+    return {
+      archiveName,
+      fileStream: passThrough,
     };
+  }
 
-    try {
-      // Рекурсивно добавляем все файлы и директории
-      await addFilesToArchive(id, `${dir.name}/`);
+  private async _addDirectoryToArchive(
+    dirId: string,
+    archive: archiver.Archiver,
+    currentPath: string
+  ): Promise<void> {
+    const files = await this._fileInfoRepository.find({ parent: dirId });
+    await Promise.all(
+      files.map(async (file) => {
+        const fileStream = await this._fileRepository.getStream(
+          this._getFilePath(file)
+        );
+        archive.append(fileStream, { name: `${currentPath}${file.name}` });
+      })
+    );
 
-      console.log("Pre finalize");
+    const subDirs = await this._dirInfoRepository.find({ parent: dirId });
+    await Promise.all(
+      subDirs.map(async (dir) => {
+        archive.append("", { name: `${currentPath}${dir.name}/` });
+        await this._addDirectoryToArchive(
+          dir.id,
+          archive,
+          `${currentPath}${dir.name}/`
+        );
+      })
+    );
+  }
 
-      // Завершаем архив
-      archive.finalize();
+  async downloadMultiple(ids: string[]): Promise<{
+    archiveName: string;
+    fileStream: Readable;
+  }> {
+    const archiveName = `directories-${Date.now()}.zip`;
+    const archive = archiver("zip", {
+      zlib: { level: 5 },
+    });
+    const passThrough = new PassThrough();
 
-      console.log(
-        `Archive created. Files: ${fileCount}, Total size: ${totalSize} bytes`
-      );
+    archive.pipe(passThrough);
 
-      return { stream: passThrough, size: totalSize };
-    } catch (err) {
-      archive.abort();
-      console.error("Failed to create archive:", err);
-      throw err;
-    }
+    await Promise.all(
+      ids.map(async (id) => {
+        const dir = await this._dirInfoRepository.get(id);
+        await this._addDirectoryToArchive(id, archive, `${dir.name}/`);
+      })
+    );
+
+    archive.finalize();
+
+    return {
+      archiveName,
+      fileStream: passThrough,
+    };
   }
 }
 

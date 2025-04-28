@@ -11,5 +11,9 @@ export default interface IDirService {
   getSize(id: string): Promise<number>;
   copy(id: string, destinationId?: string): Promise<DirInfo>;
   move(id: string, destinationId?: string): Promise<DirInfo>;
-  download(id: string): Promise<{ stream: Readable; size: number }>;
+  download(id: string): Promise<{ fileStream: Readable; archiveName: string }>;
+  downloadMultiple(ids: string[]): Promise<{
+    archiveName: string;
+    fileStream: Readable;
+  }>;
 }

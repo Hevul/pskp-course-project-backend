@@ -41,7 +41,8 @@ app
   .use("/api/file", box.fileRouter)
   .use("/api/dir", box.dirRouter)
   .use("/api/storage", box.storageRouter)
-  .use("/api/link", box.linkRouter);
+  .use("/api/link", box.linkRouter)
+  .use("/api/entity", box.entityRouter);
 
 process.on("SIGTERM", () => {
   cleanup();

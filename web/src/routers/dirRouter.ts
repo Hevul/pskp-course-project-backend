@@ -39,7 +39,7 @@ const createRouter = (
       }),
       dirController.getFullInfo
     )
-    .post(
+    .get(
       "/download/:id",
       authenticate,
       authorize({
@@ -50,6 +50,18 @@ const createRouter = (
         idFields: ["id"],
       }),
       dirController.download
+    )
+    .get(
+      "/download-many",
+      authenticate,
+      authorize({
+        entityTypes: {
+          dirIds: "dir",
+        },
+        idLocations: ["query"],
+        idFields: ["dirIds"],
+      }),
+      dirController.downloadMany
     )
     .post(
       "/create",

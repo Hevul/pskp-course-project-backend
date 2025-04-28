@@ -4,6 +4,7 @@ import { AuthorizationService } from "../../application/src/services/Authorizati
 import { FileLinkService } from "../../application/src/services/FileLinkService";
 import { FileService } from "../../application/src/services/FileService";
 import UserService from "../../application/src/services/UserService";
+import { EntityService } from "../../application/src/services/EntityService";
 import UserStorageService from "../../application/src/services/UserStorageService";
 import JwtProvider from "../../infrastructure/src/providers/JwtProvider";
 import HashSha256Provider from "../../infrastructure/src/providers/HashSha256Provider";
@@ -29,7 +30,9 @@ import createStorageRouter from "./routers/userStorageRouter";
 import createAuthRouter from "./routers/authRouter";
 import createDirRouter from "./routers/dirRouter";
 import createLinkRouter from "./routers/linkRouter";
+import createEntityRouter from "./routers/entityRouter";
 import { createAuthorizeMiddlewareFactory } from "./middlewares/utils/createAuthorizeMiddlewareFactory";
+import EntityController from "./controllers/EntityController";
 
 const dirInfoRepository = new DirInfoRepository();
 const dirRepository = new DirRepository(config.uploadDir);
@@ -79,6 +82,11 @@ const authorizationService = new AuthorizationService(
   userStorageRepository,
   fileLinkRepository
 );
+const entityService = new EntityService(
+  dirInfoRepository,
+  fileInfoRepository,
+  fileRepository
+);
 
 const createAuthenticate = () => authenticate(jwtProvider, userService);
 const authorizeMiddlewareFactory =
@@ -112,6 +120,11 @@ const linkRouter = createLinkRouter(
   authorizeMiddlewareFactory,
   new FileLinkController(fileLinkService)
 );
+const entityRouter = createEntityRouter(
+  new EntityController(entityService),
+  authorizeMiddlewareFactory,
+  createAuthenticate()
+);
 
 const box = {
   dirService,
@@ -127,6 +140,7 @@ const box = {
   storageRouter,
   authRouter,
   linkRouter,
+  entityRouter,
 };
 
 export default box;
