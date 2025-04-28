@@ -13,7 +13,6 @@ export default interface IFileService {
   downloadMultiple(ids: string[]): Promise<{
     archiveName: string;
     fileStream: Readable;
-    archiveSize: number;
   }>;
   delete(id: string): Promise<FileInfo>;
   copy(id: string, destinationId?: string): Promise<FileInfo>;

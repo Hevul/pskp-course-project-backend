@@ -87,7 +87,7 @@ export class FileController {
 
     const parsedIds = JSON.parse(fileIds);
 
-    const { archiveName, fileStream, archiveSize } =
+    const { archiveName, fileStream } =
       await this._fileService.downloadMultiple(parsedIds);
 
     res.setHeader("Content-Type", "application/zip");
@@ -95,7 +95,6 @@ export class FileController {
       "Content-Disposition",
       `attachment; filename="${archiveName}"`
     );
-    res.setHeader("Content-Length", archiveSize);
     res.setHeader("Cache-Control", "no-cache");
 
     fileStream.pipe(res);

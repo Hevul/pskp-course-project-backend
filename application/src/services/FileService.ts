@@ -164,10 +164,8 @@ export class FileService implements IFileService {
   async downloadMultiple(ids: string[]): Promise<{
     archiveName: string;
     fileStream: Readable;
-    archiveSize: number;
   }> {
     const archiveName = `files-${Date.now()}.zip`;
-    let archiveSize = 0;
     const archive = archiver("zip", {
       zlib: { level: 5 },
       highWaterMark: 1024 * 1024,
@@ -175,13 +173,6 @@ export class FileService implements IFileService {
     const passThrough = new PassThrough();
 
     archive.pipe(passThrough);
-
-    archive.append("", { name: ".init" });
-
-    for (const id of ids) {
-      const file = await this._fileInfoRepository.get(id);
-      archiveSize += file.size;
-    }
 
     (async () => {
       for (const id of ids) {
@@ -202,7 +193,7 @@ export class FileService implements IFileService {
       passThrough.destroy(err);
     });
 
-    return { archiveName, fileStream: passThrough, archiveSize };
+    return { archiveName, fileStream: passThrough };
   }
 
   async upload(
