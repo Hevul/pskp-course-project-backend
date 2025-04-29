@@ -58,13 +58,14 @@ class FileInfoRepository implements IFileInfoRepository {
   }
 
   async update(fileInfo: FileInfo): Promise<FileInfo> {
-    const { id, name, updateAt, size, parent } = fileInfo;
+    const { id, name, updateAt, size, parent, physicalFileId } = fileInfo;
 
     const updatedData = {
       name,
       updateAt,
       size,
       parent,
+      physicalFileId,
     };
 
     try {
@@ -106,7 +107,14 @@ class FileInfoRepository implements IFileInfoRepository {
   }
 
   async add(fileInfo: FileInfo): Promise<FileInfo> {
-    const { name, uploadAt, size, storage: storageId, parent } = fileInfo;
+    const {
+      name,
+      uploadAt,
+      size,
+      storage: storageId,
+      parent,
+      physicalFileId,
+    } = fileInfo;
 
     try {
       const fileInfoDb = await FileInfoDb.create({
@@ -115,6 +123,7 @@ class FileInfoRepository implements IFileInfoRepository {
         size,
         storage: storageId,
         parent,
+        physicalFileId,
       });
 
       return this._mapToFileInfo(fileInfoDb);
@@ -148,6 +157,11 @@ class FileInfoRepository implements IFileInfoRepository {
     return fileDocs.map((fileDoc) => this._mapToFileInfo(fileDoc));
   }
 
+  async getRefCount(physicalFileId: string): Promise<number> {
+    const refCount = FileInfoDb.countDocuments({ physicalFileId }).exec();
+    return refCount;
+  }
+
   private _processQuery(query: { [key: string]: any }): { [key: string]: any } {
     const processed = { ...query };
 
@@ -173,7 +187,8 @@ class FileInfoRepository implements IFileInfoRepository {
       fileDoc.storage.toString(),
       fileDoc.parent?.toString(),
       fileDoc._id.toString(),
-      fileDoc.updateAt
+      fileDoc.updateAt,
+      fileDoc.physicalFileId
     );
   }
 }

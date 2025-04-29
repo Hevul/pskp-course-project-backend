@@ -9,6 +9,7 @@ import IFileLinkRepository from "../../../core/src/repositories/IFileLinkReposit
 import CopyCollisionError from "../errors/CopyCollisionError";
 import CreateCollisionError from "../errors/CreateCollisionError";
 import archiver from "archiver";
+import { Types } from "mongoose";
 
 export class FileService implements IFileService {
   constructor(
@@ -41,10 +42,6 @@ export class FileService implements IFileService {
           throw new RenameCollisionError();
       }
     }
-  }
-
-  private _getFilePath(file: FileInfo): string {
-    return `/${file.storage}/${file.id}`;
   }
 
   async checkFileExists(
@@ -100,7 +97,7 @@ export class FileService implements IFileService {
   }
 
   async copy(id: string, parentId?: string): Promise<FileInfo> {
-    let sourceFile = await this._fileInfoRepository.get(id);
+    const sourceFile = await this._fileInfoRepository.get(id);
 
     await this._checkNameCollision(
       sourceFile.name,
@@ -114,15 +111,13 @@ export class FileService implements IFileService {
       new Date(),
       sourceFile.size,
       sourceFile.storage,
-      parentId
+      parentId,
+      "",
+      undefined,
+      sourceFile.physicalFileId
     );
 
     const createdFile = await this._fileInfoRepository.add(newFile);
-
-    await this._fileRepository.copy(
-      this._getFilePath(sourceFile),
-      this._getFilePath(createdFile)
-    );
 
     return createdFile;
   }
@@ -133,32 +128,43 @@ export class FileService implements IFileService {
     newSize: number
   ): Promise<FileInfo> {
     const existingFile = await this._fileInfoRepository.get(fileId);
+    const refCount = await this._fileInfoRepository.getRefCount(
+      existingFile.physicalFileId
+    );
 
     existingFile.updateAt = new Date();
     existingFile.size = newSize;
 
-    await this._fileInfoRepository.update(existingFile);
+    if (refCount > 1) {
+      existingFile.physicalFileId = new Types.ObjectId().toString();
+      await this._fileRepository.saveStream(existingFile.path(), fileStream);
+    } else
+      await this._fileRepository.overwrite(existingFile.path(), fileStream);
 
-    const filePath = `/${existingFile.storage}/${existingFile.id}`;
-    await this._fileRepository.overwrite(filePath, fileStream);
+    await this._fileInfoRepository.update(existingFile);
 
     return existingFile;
   }
 
   async delete(id: string): Promise<FileInfo> {
-    const fileInfo = await this._fileInfoRepository.delete(id);
+    const fileInfo = await this._fileInfoRepository.get(id);
 
+    const refCount = await this._fileInfoRepository.getRefCount(
+      fileInfo.physicalFileId
+    );
+
+    if (refCount <= 1) await this._fileRepository.rm(fileInfo.path());
+
+    await this._fileInfoRepository.delete(id);
     await this._fileLinkRepository.deleteByFileInfoId(id);
-
-    await this._fileRepository.rm(this._getFilePath(fileInfo));
 
     return fileInfo;
   }
 
-  async download(id: string): Promise<[FileInfo, string]> {
+  async download(id: string): Promise<[FileInfo, Readable]> {
     const fileInfo = await this._fileInfoRepository.get(id);
-    const pathname = `/${fileInfo.storage}/${fileInfo.id}`;
-    return [fileInfo, pathname];
+    const stream = await this._fileRepository.getStream(fileInfo.path());
+    return [fileInfo, stream];
   }
 
   async downloadMultiple(ids: string[]): Promise<{
@@ -206,13 +212,11 @@ export class FileService implements IFileService {
     await this._checkNameCollision(filename, parentId, storageId, "create");
 
     const file = new FileInfo(filename, new Date(), size, storageId, parentId);
+    file.physicalFileId = new Types.ObjectId().toString();
     const createdFile = await this._fileInfoRepository.add(file);
 
     try {
-      await this._fileRepository.saveStream(
-        this._getFilePath(createdFile),
-        readableStream
-      );
+      await this._fileRepository.saveStream(createdFile.path(), readableStream);
       return createdFile;
     } catch (error) {
       await this._fileInfoRepository.delete(createdFile.id);

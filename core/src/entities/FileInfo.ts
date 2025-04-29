@@ -15,10 +15,12 @@ class FileInfo {
     public storage: string,
     public parent?: string,
     public id: string = "",
-    public updateAt?: Date
+    public updateAt?: Date,
+    public physicalFileId: string = id
   ) {
     this.validateName(name);
     this._name = name;
+    this.physicalFileId = physicalFileId || id;
   }
 
   public get name(): string {
@@ -45,6 +47,10 @@ class FileInfo {
     if (/[\x00-\x1F\x7F]/.test(name)) throw new NonPrintableCharactersError();
 
     if (name !== name.trim()) throw new LeadingTrailingSpacesError();
+  }
+
+  public path() {
+    return `/${this.storage}/${this.physicalFileId}`;
   }
 }
 

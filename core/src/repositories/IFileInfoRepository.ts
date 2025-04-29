@@ -10,4 +10,5 @@ export default interface IFileInfoRepository {
   exists(id: string): Promise<boolean>;
   count(query: { [key: string]: any }): Promise<number>;
   find(query: { [key: string]: any }): Promise<FileInfo[]>;
+  getRefCount(physicalFileId: string): Promise<number>;
 }

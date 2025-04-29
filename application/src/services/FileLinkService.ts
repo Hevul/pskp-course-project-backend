@@ -156,7 +156,7 @@ export class FileLinkService implements IFileLinkService {
     const fileLink = await this._fileLinkRepository.getByLink(link);
     const fileInfo = await this._fileInfoRepository.get(fileLink.fileInfoId);
 
-    const pathname = `/${fileInfo.storage}/${fileInfo.id}`;
+    const pathname = fileInfo.path();
 
     fileLink.downloadCount++;
     await this._fileLinkRepository.update(fileLink);

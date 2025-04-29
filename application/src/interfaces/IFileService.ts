@@ -9,7 +9,7 @@ export default interface IFileService {
     size: number,
     parentId?: string
   ): Promise<FileInfo>;
-  download(pathname: string): Promise<[FileInfo, string]>;
+  download(pathname: string): Promise<[FileInfo, Readable]>;
   downloadMultiple(ids: string[]): Promise<{
     archiveName: string;
     fileStream: Readable;

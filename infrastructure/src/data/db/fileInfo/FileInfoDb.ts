@@ -15,9 +15,17 @@ const fileInfoDbSchema = new mongoose.Schema({
     ref: "DirInfo",
     required: false,
   },
+  physicalFileId: {
+    type: String,
+    required: true,
+    default: function () {
+      return (this as any)._id.toString();
+    },
+  },
 });
 
 fileInfoDbSchema.index({ name: 1, parent: 1, storage: 1 }, { unique: true });
+fileInfoDbSchema.index({ physicalFileId: 1 });
 
 const FileInfoDb = mongoose.model("FileInfo", fileInfoDbSchema);
 

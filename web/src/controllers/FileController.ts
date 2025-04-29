@@ -57,7 +57,7 @@ export class FileController {
   ): Promise<void> => {
     const id = req.params.id;
 
-    const [file, pathname] = await this._fileService.download(id);
+    const [file, readStream] = await this._fileService.download(id);
 
     const encodedFilename = encodeURIComponent(file.name)
       .replace(/['()]/g, escape)
@@ -71,9 +71,6 @@ export class FileController {
     );
     res.setHeader("Content-Length", file.size);
     res.setHeader("Cache-Control", "no-cache");
-
-    const fullPath = `${config.uploadDir}${pathname}`;
-    const readStream = createReadStream(fullPath);
 
     readStream.pipe(res);
   };
@@ -105,32 +102,20 @@ export class FileController {
     res: Response,
     next: NextFunction
   ): Promise<void> => {
-    try {
-      const { id } = req.params;
+    const { id } = req.params;
 
-      const [fileMeta, relativePath] = await this._fileService.download(id);
-      const filePath = path.join(config.uploadDir, relativePath);
+    const [file, fileStream] = await this._fileService.download(id);
 
-      const mimeType = mime.lookup(fileMeta.name) || "application/octet-stream";
+    const mimeType = mime.lookup(file.name) || "application/octet-stream";
+    const encodedFilename = encodeURIComponent(file.name);
 
-      const encodedFilename = encodeURIComponent(fileMeta.name);
+    res.set({
+      "Content-Type": mimeType,
+      "Content-Disposition": `inline; filename=${encodedFilename}}`,
+      "Cache-Control": "public, max-age=3600",
+    });
 
-      res.set({
-        "Content-Type": mimeType,
-        "Content-Disposition": `inline; filename=${encodedFilename}}`,
-        "Cache-Control": "public, max-age=3600",
-      });
-
-      const fileStream = fs.createReadStream(filePath);
-      fileStream.pipe(res);
-
-      fileStream.on("error", (err) => {
-        console.error("File stream error:", err);
-        res.status(500).end();
-      });
-    } catch (error) {
-      next(error);
-    }
+    fileStream.pipe(res);
   };
 
   upload = async (
