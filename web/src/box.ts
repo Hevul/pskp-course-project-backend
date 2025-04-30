@@ -49,6 +49,7 @@ const hashProvider = new HashSha256Provider();
 const dirService = new DirService(
   dirInfoRepository,
   fileInfoRepository,
+  fileLinkRepository,
   fileRepository
 );
 const fileLinkService = new FileLinkService(

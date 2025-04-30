@@ -184,8 +184,7 @@ export class FileService implements IFileService {
       for (const id of ids) {
         try {
           const file = await this._fileInfoRepository.get(id);
-          const pathname = `/${file.storage}/${file.id}`;
-          const fileStream = await this._fileRepository.getStream(pathname);
+          const fileStream = await this._fileRepository.getStream(file.path());
 
           archive.append(fileStream, { name: file.name });
         } catch (err) {

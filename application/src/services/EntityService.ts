@@ -4,8 +4,6 @@ import IDirInfoRepository from "../../../core/src/repositories/IDirInfoRepositor
 import IFileInfoRepository from "../../../core/src/repositories/IFileInfoRepository";
 import IFileRepository from "../../../core/src/repositories/IFileRepository";
 import { IEntityService } from "../interfaces/IEntityService";
-import DirInfo from "../../../core/src/entities/DirInfo";
-import FileInfo from "../../../core/src/entities/FileInfo";
 
 export class EntityService implements IEntityService {
   constructor(
@@ -21,9 +19,7 @@ export class EntityService implements IEntityService {
   ): Promise<void> {
     try {
       const file = await this.fileInfoRepository.get(fileId);
-      const fileStream = await this.fileRepository.getStream(
-        `/${file.storage}/${file.id}`
-      );
+      const fileStream = await this.fileRepository.getStream(file.path());
       archive.append(fileStream, { name: `${pathPrefix}${file.name}` });
     } catch (err) {
       console.error(`Error adding file ${fileId} to archive:`, err);
@@ -39,10 +35,8 @@ export class EntityService implements IEntityService {
     try {
       const dir = await this.dirInfoRepository.get(dirId);
 
-      // Добавляем запись о директории
       archive.append("", { name: `${pathPrefix}${dir.name}/` });
 
-      // Добавляем файлы из директории
       const files = await this.fileInfoRepository.find({ parent: dirId });
       await Promise.all(
         files.map((file) =>
@@ -50,7 +44,6 @@ export class EntityService implements IEntityService {
         )
       );
 
-      // Рекурсивно добавляем поддиректории
       const subDirs = await this.dirInfoRepository.find({ parent: dirId });
       await Promise.all(
         subDirs.map((subDir) =>
@@ -92,12 +85,10 @@ export class EntityService implements IEntityService {
     });
 
     try {
-      // Добавляем файлы верхнего уровня
       await Promise.all(
         fileIds.map((fileId) => this._addFileToArchive(fileId, archive))
       );
 
-      // Добавляем директории верхнего уровня
       await Promise.all(
         dirIds.map((dirId) => this._addDirectoryToArchive(dirId, archive))
       );

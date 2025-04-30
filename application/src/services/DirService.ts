@@ -14,11 +14,13 @@ import RenameCollisionError from "../errors/RenameCollisionError";
 import { finished } from "stream/promises";
 import { Readable, PassThrough } from "stream";
 import archiver from "archiver";
+import IFileLinkRepository from "../../../core/src/repositories/IFileLinkRepository";
 
 class DirService implements IDirService {
   constructor(
     private readonly _dirInfoRepository: IDirInfoRepository,
     private readonly _fileInfoRepository: IFileInfoRepository,
+    private readonly _fileLinkRepository: IFileLinkRepository,
     private readonly _fileRepository: IFileRepository
   ) {}
 
@@ -148,9 +150,11 @@ class DirService implements IDirService {
     sourceDirId: string,
     targetDirId: string
   ): Promise<void> {
-    const files = await this._fileInfoRepository.find({
-      parent: sourceDirId,
-    });
+    const [files, subDirs] = await Promise.all([
+      this._fileInfoRepository.find({ parent: sourceDirId }),
+      this._dirInfoRepository.find({ parent: sourceDirId }),
+    ]);
+
     await Promise.all(
       files.map(async (file) => {
         const newFile = new FileInfo(
@@ -158,20 +162,15 @@ class DirService implements IDirService {
           new Date(),
           file.size,
           file.storage,
-          targetDirId
+          targetDirId,
+          "",
+          undefined,
+          file.physicalFileId
         );
-        const createdFile = await this._fileInfoRepository.add(newFile);
-
-        await this._fileRepository.copy(
-          this._getFilePath(file),
-          this._getFilePath(createdFile)
-        );
+        await this._fileInfoRepository.add(newFile);
       })
     );
 
-    const subDirs = await this._dirInfoRepository.find({
-      parent: sourceDirId,
-    });
     await Promise.all(
       subDirs.map(async (dir) => {
         const newSubDir = new DirInfo(
@@ -184,10 +183,6 @@ class DirService implements IDirService {
         await this._copyDirectoryContents(dir.id, createdSubDir.id);
       })
     );
-  }
-
-  private _getFilePath(file: FileInfo): string {
-    return `/${file.storage}/${file.id}`;
   }
 
   async getSize(id: string): Promise<number> {
@@ -207,27 +202,34 @@ class DirService implements IDirService {
     const dirInfo = await this._dirInfoRepository.get(id);
 
     await this._deleteDirectoryContents(id);
-
     await this._dirInfoRepository.delete(id);
 
     return dirInfo;
   }
 
   private async _deleteDirectoryContents(dirId: string): Promise<void> {
-    const files = await this._fileInfoRepository.find({ parent: dirId });
+    const [files, subDirs] = await Promise.all([
+      this._fileInfoRepository.find({ parent: dirId }),
+      this._dirInfoRepository.find({ parent: dirId }),
+    ]);
 
     await Promise.all(
       files.map(async (file) => {
         try {
-          await this._fileRepository.rm(this._getFilePath(file));
+          const refCount = await this._fileInfoRepository.getRefCount(
+            file.physicalFileId
+          );
+
+          if (refCount <= 1) await this._fileRepository.rm(file.path());
+
           await this._fileInfoRepository.delete(file.id);
+          await this._fileLinkRepository.deleteByFileInfoId(file.id);
         } catch (error) {
           console.error(`Failed to delete file ${file.id}:`, error);
         }
       })
     );
 
-    const subDirs = await this._dirInfoRepository.find({ parent: dirId });
     await Promise.all(
       subDirs.map(async (dir) => {
         try {
@@ -282,9 +284,7 @@ class DirService implements IDirService {
     const files = await this._fileInfoRepository.find({ parent: dirId });
     await Promise.all(
       files.map(async (file) => {
-        const fileStream = await this._fileRepository.getStream(
-          this._getFilePath(file)
-        );
+        const fileStream = await this._fileRepository.getStream(file.path());
         archive.append(fileStream, { name: `${currentPath}${file.name}` });
       })
     );
