@@ -98,16 +98,54 @@ export class FileService implements IFileService {
 
   async copy(id: string, parentId?: string): Promise<FileInfo> {
     const sourceFile = await this._fileInfoRepository.get(id);
+    let newName = sourceFile.name;
+    let attempt = 1;
 
-    await this._checkNameCollision(
-      sourceFile.name,
-      parentId,
-      sourceFile.storage,
-      "copy"
-    );
+    while (true) {
+      try {
+        await this._checkNameCollision(
+          newName,
+          parentId,
+          sourceFile.storage,
+          "copy"
+        );
+        break; // Если коллизии нет, выходим из цикла
+      } catch (error) {
+        const extensionIndex = sourceFile.name.lastIndexOf(".");
+
+        if (extensionIndex >= 0) {
+          // Если есть расширение, вставляем "(1)" перед ним
+          const baseName = sourceFile.name.substring(0, extensionIndex);
+          const extension = sourceFile.name.substring(extensionIndex);
+
+          if (attempt === 1) {
+            newName = `${baseName} (${attempt})${extension}`;
+          } else {
+            // Удаляем предыдущий числовой суффикс в скобках
+            const lastNumberPattern = / \(\d+\)$/;
+            const baseWithoutNumber = baseName.replace(lastNumberPattern, "");
+            newName = `${baseWithoutNumber} (${attempt})${extension}`;
+          }
+        } else {
+          // Если нет расширения, просто добавляем "(1)" в конец
+          if (attempt === 1) {
+            newName = `${sourceFile.name} (${attempt})`;
+          } else {
+            // Удаляем предыдущий числовой суффикс в скобках
+            const lastNumberPattern = / \(\d+\)$/;
+            const baseWithoutNumber = sourceFile.name.replace(
+              lastNumberPattern,
+              ""
+            );
+            newName = `${baseWithoutNumber} (${attempt})`;
+          }
+        }
+        attempt++;
+      }
+    }
 
     const newFile = new FileInfo(
-      sourceFile.name,
+      newName,
       new Date(),
       sourceFile.size,
       sourceFile.storage,
@@ -118,7 +156,6 @@ export class FileService implements IFileService {
     );
 
     const createdFile = await this._fileInfoRepository.add(newFile);
-
     return createdFile;
   }
 
