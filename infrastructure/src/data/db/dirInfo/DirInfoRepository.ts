@@ -116,7 +116,6 @@ class DirInfoRepository implements IDirInfoRepository {
 
     const updatedData = {
       name,
-
       parent,
     };
 

@@ -112,9 +112,8 @@ class DirService implements IDirService {
         destinationId
       );
       const currentPath = await this._dirInfoRepository.getPath(id);
-      if (destinationPath.startsWith(`${currentPath}/`)) {
+      if (destinationPath.startsWith(`${currentPath}/`))
         throw new DirectoryMoveInChildError();
-      }
     }
 
     if (newName) movedDir.name = newName;
@@ -134,9 +133,21 @@ class DirService implements IDirService {
           storage: movedDir.storage,
         });
 
-        if (overwrite) await this.delete(conflictingDir.id);
-        else throw new MoveCollisionError(conflictingDir.id);
-      } else throw error;
+        if (overwrite) {
+          const originalName = movedDir.name;
+
+          movedDir.name = `temp_${Date.now()}_${movedDir.name}`;
+          movedDir.parent = undefined;
+          const tempDir = await this._dirInfoRepository.update(movedDir);
+
+          await this.delete(conflictingDir.id);
+
+          tempDir.name = originalName;
+          tempDir.parent = destinationId;
+          return this._dirInfoRepository.update(tempDir);
+        } else throw new MoveCollisionError(conflictingDir.id);
+      }
+      throw error;
     }
 
     movedDir.parent = destinationId;
@@ -145,8 +156,6 @@ class DirService implements IDirService {
 
   async copy(id: string, destinationId?: string): Promise<DirInfo> {
     const sourceDir = await this._dirInfoRepository.get(id);
-
-    console.log(1);
 
     if (id === destinationId) throw new DirectoryMoveInItSelfError();
 
@@ -179,8 +188,6 @@ class DirService implements IDirService {
           }
         }
 
-        console.log(4, newName);
-
         const newDir = new DirInfo(
           newName,
           new Date(),
@@ -188,7 +195,6 @@ class DirService implements IDirService {
           destinationId
         );
 
-        console.log(5);
         const createdDir = await this._dirInfoRepository.add(newDir);
         await this._copyDirectoryContents(id, createdDir.id);
         return createdDir;
@@ -196,17 +202,13 @@ class DirService implements IDirService {
       throw error;
     }
 
-    console.log(sourceDir.name);
-
-    console.log(2);
-
     const newDir = new DirInfo(
       sourceDir.name,
       new Date(),
       sourceDir.storage,
       destinationId
     );
-    console.log(3);
+
     const createdDir = await this._dirInfoRepository.add(newDir);
     await this._copyDirectoryContents(id, createdDir.id);
     return createdDir;
