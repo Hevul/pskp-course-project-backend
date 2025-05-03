@@ -58,7 +58,7 @@ class DirService implements IDirService {
     if (existingDirs.includes(name) || existingFiles.includes(name)) {
       switch (operationType) {
         case "move":
-          throw new MoveCollisionError();
+          throw new MoveCollisionError("");
         case "copy":
           throw new CopyCollisionError();
         case "rename":
@@ -95,7 +95,14 @@ class DirService implements IDirService {
     return this._dirInfoRepository.find({ storage: storageId });
   }
 
-  async move(id: string, destinationId?: string): Promise<DirInfo> {
+  async move(options: {
+    id: string;
+    destinationId?: string;
+    newName?: string;
+    overwrite?: boolean;
+  }): Promise<DirInfo> {
+    const { id, destinationId, newName, overwrite } = options;
+
     let movedDir = await this._dirInfoRepository.get(id);
 
     if (id === destinationId) throw new DirectoryMoveInItSelfError();
@@ -110,12 +117,27 @@ class DirService implements IDirService {
       }
     }
 
-    await this._checkNameCollision(
-      movedDir.name,
-      destinationId,
-      movedDir.storage,
-      "move"
-    );
+    if (newName) movedDir.name = newName;
+
+    try {
+      await this._checkNameCollision(
+        movedDir.name,
+        destinationId,
+        movedDir.storage,
+        "move"
+      );
+    } catch (error) {
+      if (error instanceof MoveCollisionError) {
+        const [conflictingDir] = await this._dirInfoRepository.find({
+          name: movedDir.name,
+          parent: destinationId,
+          storage: movedDir.storage,
+        });
+
+        if (overwrite) await this.delete(conflictingDir.id);
+        else throw new MoveCollisionError(conflictingDir.id);
+      } else throw error;
+    }
 
     movedDir.parent = destinationId;
     return this._dirInfoRepository.update(movedDir);

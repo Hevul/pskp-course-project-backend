@@ -1,6 +1,7 @@
 import "express-async-errors";
 import { Request, Response, NextFunction } from "express";
 import IDirService from "../../../application/src/interfaces/IDirService";
+import MoveCollisionError from "../../../application/src/errors/MoveCollisionError";
 
 class DirController {
   constructor(private readonly _dirService: IDirService) {}
@@ -74,12 +75,25 @@ class DirController {
     res: Response,
     next: NextFunction
   ): Promise<void> => {
-    const id = req.body.id;
-    const parentId = req.body.parentId;
+    try {
+      const { newName, id, parentId, overwrite } = req.body;
 
-    await this._dirService.move(id, parentId);
+      await this._dirService.move({
+        id,
+        destinationId: parentId,
+        newName,
+        overwrite,
+      });
 
-    res.good();
+      res.good();
+    } catch (error) {
+      if (error instanceof MoveCollisionError) {
+        res.status(400).json({
+          message: "Directory with the same name already exists",
+          conflictingId: error.conflictingId,
+        });
+      } else throw error;
+    }
   };
 
   rename = async (

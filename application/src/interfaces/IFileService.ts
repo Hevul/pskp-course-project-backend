@@ -16,7 +16,12 @@ export default interface IFileService {
   }>;
   delete(id: string): Promise<FileInfo>;
   copy(id: string, destinationId?: string): Promise<FileInfo>;
-  move(id: string, destinationId?: string): Promise<FileInfo>;
+  move(options: {
+    id: string;
+    destinationId?: string;
+    newName?: string;
+    overwrite?: boolean;
+  }): Promise<FileInfo>;
   rename(id: string, name: string): Promise<FileInfo>;
   get(id: string): Promise<FileInfo>;
   getAllByStorageId(id: string): Promise<FileInfo[]>;

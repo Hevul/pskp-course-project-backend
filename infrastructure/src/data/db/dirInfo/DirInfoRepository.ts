@@ -11,13 +11,13 @@ class DirInfoRepository implements IDirInfoRepository {
     id: string
   ): Promise<{ fileCount: number; dirCount: number }> {
     const allDirIds = await this._getAllSubdirectoryIds(this._toObjectId(id));
-    allDirIds.push(new Types.ObjectId(id));
+
+    const allIdsForFiles = [...allDirIds, this._toObjectId(id)];
 
     const [fileCount, dirCount] = await Promise.all([
-      FileInfoDb.countDocuments({ parent: { $in: allDirIds } }),
+      FileInfoDb.countDocuments({ parent: { $in: allIdsForFiles } }),
       DirInfoDb.countDocuments({
         _id: { $in: allDirIds },
-        parent: { $exists: true, $ne: null },
       }),
     ]);
 
@@ -40,7 +40,14 @@ class DirInfoRepository implements IDirInfoRepository {
         },
       },
       { $unwind: "$allSubDirs" },
-      { $project: { _id: "$allSubDirs._id" } },
+      {
+        $project: {
+          _id: "$allSubDirs._id",
+          isParent: { $eq: ["$allSubDirs._id", dirId] },
+        },
+      },
+      { $match: { isParent: false } },
+      { $project: { _id: 1 } },
     ]).exec();
 
     return result.map((doc) => doc._id);

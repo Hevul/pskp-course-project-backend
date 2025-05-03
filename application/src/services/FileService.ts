@@ -33,7 +33,7 @@ export class FileService implements IFileService {
     if (existingNames.length > 0) {
       switch (operationType) {
         case "move":
-          throw new MoveCollisionError();
+          throw new MoveCollisionError(existingNames[0].id);
         case "copy":
           throw new CopyCollisionError();
         case "create":
@@ -78,16 +78,30 @@ export class FileService implements IFileService {
     return file;
   }
 
-  async move(id: string, destinationId?: string): Promise<FileInfo> {
+  async move(options: {
+    id: string;
+    destinationId?: string;
+    newName?: string;
+    overwrite?: boolean;
+  }): Promise<FileInfo> {
+    const { id, destinationId, newName, overwrite } = options;
     const file = await this._fileInfoRepository.get(id);
 
+    if (newName) file.name = newName;
+
     if (file.parent !== destinationId) {
-      await this._checkNameCollision(
-        file.name,
-        destinationId,
-        file.storage,
-        "move"
-      );
+      try {
+        await this._checkNameCollision(
+          file.name,
+          destinationId,
+          file.storage,
+          "move"
+        );
+      } catch (error) {
+        if (error instanceof MoveCollisionError && overwrite)
+          await this.delete(error.conflictingId);
+        else throw error;
+      }
 
       file.parent = destinationId;
       await this._fileInfoRepository.update(file);
@@ -109,29 +123,25 @@ export class FileService implements IFileService {
           sourceFile.storage,
           "copy"
         );
-        break; // Если коллизии нет, выходим из цикла
+        break;
       } catch (error) {
         const extensionIndex = sourceFile.name.lastIndexOf(".");
 
         if (extensionIndex >= 0) {
-          // Если есть расширение, вставляем "(1)" перед ним
           const baseName = sourceFile.name.substring(0, extensionIndex);
           const extension = sourceFile.name.substring(extensionIndex);
 
           if (attempt === 1) {
             newName = `${baseName} (${attempt})${extension}`;
           } else {
-            // Удаляем предыдущий числовой суффикс в скобках
             const lastNumberPattern = / \(\d+\)$/;
             const baseWithoutNumber = baseName.replace(lastNumberPattern, "");
             newName = `${baseWithoutNumber} (${attempt})${extension}`;
           }
         } else {
-          // Если нет расширения, просто добавляем "(1)" в конец
           if (attempt === 1) {
             newName = `${sourceFile.name} (${attempt})`;
           } else {
-            // Удаляем предыдущий числовой суффикс в скобках
             const lastNumberPattern = / \(\d+\)$/;
             const baseWithoutNumber = sourceFile.name.replace(
               lastNumberPattern,

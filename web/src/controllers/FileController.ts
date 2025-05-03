@@ -6,6 +6,7 @@ import IFileLinkService from "../../../application/src/interfaces/IFileLinkServi
 import fs, { createReadStream } from "fs";
 import path from "path";
 import mime from "mime";
+import MoveCollisionError from "../../../application/src/errors/MoveCollisionError";
 
 export class FileController {
   constructor(
@@ -225,12 +226,25 @@ export class FileController {
     res: Response,
     next: NextFunction
   ): Promise<void> => {
-    const id = req.body.id;
-    const parentId = req.body.parentId;
+    try {
+      const { id, parentId, newName, overwrite } = req.body;
 
-    await this._fileService.move(id, parentId);
+      await this._fileService.move({
+        id,
+        destinationId: parentId,
+        newName,
+        overwrite,
+      });
 
-    res.good({ message: "File is moved" });
+      res.good({ message: "File is moved" });
+    } catch (error) {
+      if (error instanceof MoveCollisionError) {
+        res.status(400).json({
+          message: "File with the same name already exists",
+          conflictingId: error.conflictingId,
+        });
+      } else throw error;
+    }
   };
 
   rename = async (

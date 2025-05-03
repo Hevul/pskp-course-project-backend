@@ -1,6 +1,6 @@
 class MoveCollisionError extends Error {
-  constructor() {
-    super();
+  constructor(public conflictingId: string) {
+    super("File with the same name already exists");
     this.name = "MoveCollisionError";
   }
 }
