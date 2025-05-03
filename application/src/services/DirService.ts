@@ -146,14 +146,59 @@ class DirService implements IDirService {
   async copy(id: string, destinationId?: string): Promise<DirInfo> {
     const sourceDir = await this._dirInfoRepository.get(id);
 
+    console.log(1);
+
     if (id === destinationId) throw new DirectoryMoveInItSelfError();
 
-    await this._checkNameCollision(
-      sourceDir.name,
-      destinationId,
-      sourceDir.storage,
-      "copy"
-    );
+    try {
+      await this._checkNameCollision(
+        sourceDir.name,
+        destinationId,
+        sourceDir.storage,
+        "copy"
+      );
+    } catch (error) {
+      if (error instanceof CopyCollisionError) {
+        let newName = sourceDir.name;
+        let counter = 1;
+        let nameExists = true;
+
+        while (nameExists) {
+          try {
+            newName = `${sourceDir.name}(${counter})`;
+            await this._checkNameCollision(
+              newName,
+              destinationId,
+              sourceDir.storage,
+              "copy"
+            );
+            nameExists = false;
+          } catch (e) {
+            if (!(e instanceof CopyCollisionError)) throw e;
+            counter++;
+          }
+        }
+
+        console.log(4, newName);
+
+        const newDir = new DirInfo(
+          newName,
+          new Date(),
+          sourceDir.storage,
+          destinationId
+        );
+
+        console.log(5);
+        const createdDir = await this._dirInfoRepository.add(newDir);
+        await this._copyDirectoryContents(id, createdDir.id);
+        return createdDir;
+      }
+      throw error;
+    }
+
+    console.log(sourceDir.name);
+
+    console.log(2);
 
     const newDir = new DirInfo(
       sourceDir.name,
@@ -161,10 +206,9 @@ class DirService implements IDirService {
       sourceDir.storage,
       destinationId
     );
+    console.log(3);
     const createdDir = await this._dirInfoRepository.add(newDir);
-
     await this._copyDirectoryContents(id, createdDir.id);
-
     return createdDir;
   }
 

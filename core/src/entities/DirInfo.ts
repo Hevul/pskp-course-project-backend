@@ -48,7 +48,7 @@ class DirInfo {
 
     if (name.endsWith(".")) throw new DirectoryNameEndsWithDotError();
 
-    if (!/^[a-zA-Zа-яА-Я0-9_\-\.\s]+$/.test(name))
+    if (!/^[a-zA-Zа-яА-Я0-9_\-\.\s()]+$/.test(name))
       throw new InvalidDirectoryCharactersError(
         "буквы, цифры, _, -, ., пробел"
       );
