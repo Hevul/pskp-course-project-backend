@@ -14,4 +14,9 @@ export interface IEntityService {
     conflictingFiles: { movedId: string; originalId: string }[];
     conflictingDirs: { movedId: string; originalId: string }[];
   }>;
+  copyMultiple(options: {
+    fileIds: string[];
+    dirIds: string[];
+    destinationId?: string;
+  }): Promise<void>;
 }

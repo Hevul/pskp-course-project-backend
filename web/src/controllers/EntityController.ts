@@ -53,6 +53,22 @@ class EntityController {
       res.status(400).json(conflicts);
     else res.good({ message: "Entities were moved" });
   };
+
+  copyMultiple = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    const { fileIds, dirIds, destinationId } = req.body;
+
+    await this._entityService.copyMultiple({
+      fileIds,
+      dirIds,
+      destinationId,
+    });
+
+    res.good({ message: "Objects were copied" });
+  };
 }
 
 export default EntityController;

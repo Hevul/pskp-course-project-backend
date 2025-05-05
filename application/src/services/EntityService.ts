@@ -17,6 +17,17 @@ export class EntityService implements IEntityService {
     private readonly _dirService: IDirService
   ) {}
 
+  async copyMultiple(options: {
+    fileIds: string[];
+    dirIds: string[];
+    destinationId?: string;
+  }): Promise<void> {
+    const { fileIds, dirIds, destinationId } = options;
+
+    fileIds.forEach((id) => this._fileService.copy(id, destinationId));
+    dirIds.forEach((id) => this._dirService.copy(id, destinationId));
+  }
+
   async moveMultiple(options: {
     fileIds: string[];
     dirIds: string[];

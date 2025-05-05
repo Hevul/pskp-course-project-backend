@@ -36,6 +36,20 @@ const createRouter = (
         idFields: ["fileIds", "dirIds", "destinationId"],
       }),
       controller.moveMultiple
+    )
+    .post(
+      "/copy-multiple",
+      authenticate,
+      authorize({
+        entityTypes: {
+          fileIds: "file",
+          dirIds: "dir",
+          destinationId: "dir",
+        },
+        idLocations: ["body"],
+        idFields: ["fileIds", "dirIds", "destinationId"],
+      }),
+      controller.copyMultiple
     );
 
   return router;
