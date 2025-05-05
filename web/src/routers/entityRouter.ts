@@ -9,19 +9,34 @@ const createRouter = (
 ) => {
   const router = express.Router();
 
-  router.get(
-    "/download-many/",
-    authenticate,
-    authorize({
-      entityTypes: {
-        fileIds: "file",
-        dirIds: "dir",
-      },
-      idLocations: ["query"],
-      idFields: ["fileIds", "dirIds"],
-    }),
-    controller.downloadMany
-  );
+  router
+    .get(
+      "/download-many/",
+      authenticate,
+      authorize({
+        entityTypes: {
+          fileIds: "file",
+          dirIds: "dir",
+        },
+        idLocations: ["query"],
+        idFields: ["fileIds", "dirIds"],
+      }),
+      controller.downloadMany
+    )
+    .put(
+      "/move-multiple",
+      authenticate,
+      authorize({
+        entityTypes: {
+          fileIds: "file",
+          dirIds: "dir",
+          destinationId: "dir",
+        },
+        idLocations: ["body"],
+        idFields: ["fileIds", "dirIds", "destinationId"],
+      }),
+      controller.moveMultiple
+    );
 
   return router;
 };

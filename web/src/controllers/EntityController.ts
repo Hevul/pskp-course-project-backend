@@ -31,6 +31,28 @@ class EntityController {
 
     fileStream.pipe(res);
   };
+
+  moveMultiple = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    const { fileIds, dirIds, destinationId, overwrite } = req.body;
+
+    const conflicts = await this._entityService.moveMultiple({
+      fileIds,
+      dirIds,
+      destinationId,
+      overwrite,
+    });
+
+    if (
+      conflicts.conflictingFiles.length > 0 ||
+      conflicts.conflictingDirs.length > 0
+    )
+      res.status(400).json(conflicts);
+    else res.good({ message: "Entities were moved" });
+  };
 }
 
 export default EntityController;

@@ -4,13 +4,72 @@ import IDirInfoRepository from "../../../core/src/repositories/IDirInfoRepositor
 import IFileInfoRepository from "../../../core/src/repositories/IFileInfoRepository";
 import IFileRepository from "../../../core/src/repositories/IFileRepository";
 import { IEntityService } from "../interfaces/IEntityService";
+import IFileService from "../interfaces/IFileService";
+import IDirService from "../interfaces/IDirService";
+import MoveCollisionError from "../errors/MoveCollisionError";
 
 export class EntityService implements IEntityService {
   constructor(
-    private readonly dirInfoRepository: IDirInfoRepository,
-    private readonly fileInfoRepository: IFileInfoRepository,
-    private readonly fileRepository: IFileRepository
+    private readonly _dirInfoRepository: IDirInfoRepository,
+    private readonly _fileInfoRepository: IFileInfoRepository,
+    private readonly _fileRepository: IFileRepository,
+    private readonly _fileService: IFileService,
+    private readonly _dirService: IDirService
   ) {}
+
+  async moveMultiple(options: {
+    fileIds: string[];
+    dirIds: string[];
+    destinationId?: string;
+    overwrite?: boolean;
+  }): Promise<{
+    conflictingFiles: { movedId: string; originalId: string }[];
+    conflictingDirs: { movedId: string; originalId: string }[];
+  }> {
+    const { fileIds, dirIds, destinationId, overwrite } = options;
+
+    const conflictingFiles: { movedId: string; originalId: string }[] = [];
+    const conflictingDirs: { movedId: string; originalId: string }[] = [];
+
+    for (const id of fileIds) {
+      try {
+        await this._fileService.move({
+          id,
+          overwrite,
+          destinationId,
+        });
+      } catch (error) {
+        if (error instanceof MoveCollisionError) {
+          conflictingFiles.push({
+            movedId: id,
+            originalId: error.conflictingId,
+          });
+        } else throw error;
+      }
+    }
+
+    for (const id of dirIds) {
+      try {
+        await this._dirService.move({
+          id,
+          overwrite,
+          destinationId,
+        });
+      } catch (error) {
+        if (error instanceof MoveCollisionError) {
+          conflictingDirs.push({
+            movedId: id,
+            originalId: error.conflictingId,
+          });
+        } else throw error;
+      }
+    }
+
+    return {
+      conflictingFiles,
+      conflictingDirs,
+    };
+  }
 
   private async _addFileToArchive(
     fileId: string,
@@ -18,8 +77,8 @@ export class EntityService implements IEntityService {
     pathPrefix: string = ""
   ): Promise<void> {
     try {
-      const file = await this.fileInfoRepository.get(fileId);
-      const fileStream = await this.fileRepository.getStream(file.path());
+      const file = await this._fileInfoRepository.get(fileId);
+      const fileStream = await this._fileRepository.getStream(file.path());
       archive.append(fileStream, { name: `${pathPrefix}${file.name}` });
     } catch (err) {
       console.error(`Error adding file ${fileId} to archive:`, err);
@@ -33,18 +92,18 @@ export class EntityService implements IEntityService {
     pathPrefix: string = ""
   ): Promise<void> {
     try {
-      const dir = await this.dirInfoRepository.get(dirId);
+      const dir = await this._dirInfoRepository.get(dirId);
 
       archive.append("", { name: `${pathPrefix}${dir.name}/` });
 
-      const files = await this.fileInfoRepository.find({ parent: dirId });
+      const files = await this._fileInfoRepository.find({ parent: dirId });
       await Promise.all(
         files.map((file) =>
           this._addFileToArchive(file.id, archive, `${pathPrefix}${dir.name}/`)
         )
       );
 
-      const subDirs = await this.dirInfoRepository.find({ parent: dirId });
+      const subDirs = await this._dirInfoRepository.find({ parent: dirId });
       await Promise.all(
         subDirs.map((subDir) =>
           this._addDirectoryToArchive(

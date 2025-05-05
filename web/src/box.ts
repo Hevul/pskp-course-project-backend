@@ -86,7 +86,9 @@ const authorizationService = new AuthorizationService(
 const entityService = new EntityService(
   dirInfoRepository,
   fileInfoRepository,
-  fileRepository
+  fileRepository,
+  fileService,
+  dirService
 );
 
 const createAuthenticate = () => authenticate(jwtProvider, userService);
