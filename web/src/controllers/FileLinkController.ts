@@ -184,9 +184,7 @@ class FileLinkController {
     const { id, name, description } = req.body;
 
     await this._fileLinkService.updateName(id, name);
-    const a = await this._fileLinkService.updateDescription(id, description);
-
-    console.log(a);
+    await this._fileLinkService.updateDescription(id, description);
 
     res.good({ message: "Name and description were updated!" });
   };

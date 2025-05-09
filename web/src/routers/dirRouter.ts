@@ -121,7 +121,7 @@ const createRouter = (
       validateRequest,
       dirController.move
     )
-    .patch(
+    .put(
       "/rename",
       authenticate,
       authorize({

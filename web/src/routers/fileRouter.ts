@@ -154,7 +154,7 @@ const createRouter = (
       validateRequest,
       fileController.move
     )
-    .patch(
+    .put(
       "/rename",
       authenticate,
       authorize({

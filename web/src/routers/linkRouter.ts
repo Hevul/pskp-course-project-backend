@@ -56,7 +56,7 @@ const createRouter = (
       validateRequest,
       fileLinkController.download
     )
-    .patch(
+    .put(
       "/add-friend",
       authenticate,
       authorize({
@@ -80,7 +80,7 @@ const createRouter = (
       }),
       fileLinkController.create
     )
-    .patch(
+    .put(
       "/remove-friend",
       authenticate,
       authorize({
@@ -94,7 +94,7 @@ const createRouter = (
       validateRequest,
       fileLinkController.removeFriend
     )
-    .patch(
+    .put(
       "/remove-all-friends/:id",
       authenticate,
       authorize({
@@ -106,7 +106,7 @@ const createRouter = (
       }),
       fileLinkController.removeAllFriends
     )
-    .patch(
+    .put(
       "/set-publicity",
       authenticate,
       authorize({

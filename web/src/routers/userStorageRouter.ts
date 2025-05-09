@@ -43,7 +43,7 @@ const createRouter = (
       validateRequest,
       controller.create
     )
-    .patch(
+    .put(
       "/rename",
       authenticate,
       authorize({
