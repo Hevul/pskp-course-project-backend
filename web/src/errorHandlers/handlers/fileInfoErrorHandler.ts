@@ -3,6 +3,7 @@ import CreateCollisionError from "../../../../application/src/errors/CreateColli
 import DirectoryMoveInChildError from "../../../../application/src/errors/DirectoryMoveInChildError";
 import MoveCollisionError from "../../../../application/src/errors/MoveCollisionError";
 import RenameCollisionError from "../../../../application/src/errors/RenameCollisionError";
+import SameDestinationError from "../../../../application/src/errors/SameDestinationError";
 import EmptyFileNameError from "../../../../core/src/errors/EmptyFileNameError";
 import ForbiddenCharactersError from "../../../../core/src/errors/ForbiddenCharactersError";
 import LeadingTrailingSpacesError from "../../../../core/src/errors/LeadingTrailingSpacesError";
@@ -82,6 +83,12 @@ const operations: ErrorConfig[] = [
     errorDetails: {
       msg: "Файл с таким же именем уже существует в выбранной папке!",
       path: "upload",
+    },
+  },
+  {
+    errorName: SameDestinationError.name,
+    errorDetails: {
+      msg: "Нельзя переместить файл, в ту же папку, где он уже находиться!",
     },
   },
 ];

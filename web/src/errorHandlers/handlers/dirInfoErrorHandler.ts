@@ -4,6 +4,7 @@ import DirectoryMoveInChildError from "../../../../application/src/errors/Direct
 import DirectoryMoveInItSelfError from "../../../../application/src/errors/DirectoryMoveInItSelfError";
 import MoveCollisionError from "../../../../application/src/errors/MoveCollisionError";
 import RenameCollisionError from "../../../../application/src/errors/RenameCollisionError";
+import SameDestinationError from "../../../../application/src/errors/SameDestinationError";
 import DirectoryNameEndsWithDotError from "../../../../core/src/errors/DirectoryNameEndsWithDotError";
 import EmptyFileNameError from "../../../../core/src/errors/EmptyFileNameError";
 import ForbiddenCharactersError from "../../../../core/src/errors/ForbiddenCharactersError";
@@ -111,6 +112,12 @@ const operations: ErrorConfig[] = [
     errorName: CopyCollisionError.name,
     errorDetails: {
       msg: "Папка с таким же именем уже существует в выбранной папке!",
+    },
+  },
+  {
+    errorName: SameDestinationError.name,
+    errorDetails: {
+      msg: "Нельзя переместить папку, в ту же папку, где он уже находиться!",
     },
   },
 ];

@@ -120,6 +120,18 @@ const createRouter = (
       validateRequest,
       fileLinkController.setPublicity
     )
+    .put(
+      "/update-name-and-description",
+      authenticate,
+      authorize({
+        entityTypes: {
+          id: "link",
+        },
+        idLocations: ["body"],
+        idFields: ["id"],
+      }),
+      fileLinkController.updateNameAndDescription
+    )
     .delete(
       "/delete",
       authenticate,

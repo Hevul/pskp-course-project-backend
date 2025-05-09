@@ -11,10 +11,10 @@ import FileInfo from "../../../core/src/entities/FileInfo";
 import IFileInfoRepository from "../../../core/src/repositories/IFileInfoRepository";
 import IFileRepository from "../../../core/src/repositories/IFileRepository";
 import RenameCollisionError from "../errors/RenameCollisionError";
-import { finished } from "stream/promises";
 import { Readable, PassThrough } from "stream";
 import archiver from "archiver";
 import IFileLinkRepository from "../../../core/src/repositories/IFileLinkRepository";
+import SameDestinationError from "../errors/SameDestinationError";
 
 class DirService implements IDirService {
   constructor(
@@ -106,6 +106,7 @@ class DirService implements IDirService {
     let movedDir = await this._dirInfoRepository.get(id);
 
     if (id === destinationId) throw new DirectoryMoveInItSelfError();
+    if (movedDir.parent === destinationId) throw new SameDestinationError();
 
     if (destinationId) {
       const destinationPath = await this._dirInfoRepository.getPath(

@@ -32,7 +32,16 @@ class FileLinkRepository implements IFileLinkRepository {
   }
 
   async update(fileLink: FileLink): Promise<FileLink> {
-    const { id, link, friends, isPublic, createAt, downloadCount } = fileLink;
+    const {
+      id,
+      link,
+      friends,
+      isPublic,
+      createAt,
+      downloadCount,
+      name,
+      description,
+    } = fileLink;
 
     const updatedData = {
       link,
@@ -40,6 +49,8 @@ class FileLinkRepository implements IFileLinkRepository {
       isPublic,
       createAt,
       downloadCount,
+      name,
+      description,
     };
 
     try {
@@ -120,6 +131,8 @@ class FileLinkRepository implements IFileLinkRepository {
       isPublic,
       createAt,
       downloadCount,
+      name,
+      description,
     } = fileLink;
 
     try {
@@ -131,6 +144,8 @@ class FileLinkRepository implements IFileLinkRepository {
         isPublic,
         createAt,
         downloadCount,
+        name,
+        description,
       });
 
       return map(fileLinkDb);
@@ -142,19 +157,31 @@ class FileLinkRepository implements IFileLinkRepository {
 }
 
 function map(dbDocument: mongoose.Document) {
-  const { _id, link, owner, file, isPublic, friends, createAt, downloadCount } =
-    dbDocument.toObject();
-
-  return new FileLink(
+  const {
+    _id,
     link,
-    owner.toString(),
-    file.toString(),
-    friends.map((f: mongoose.Types.ObjectId) => f.toString()),
+    owner,
+    file,
+    isPublic,
+    friends,
+    createAt,
+    downloadCount,
+    name,
+    description,
+  } = dbDocument.toObject();
+
+  return new FileLink({
+    link,
+    ownerId: owner.toString(),
+    fileInfoId: file.toString(),
+    name,
+    description,
+    friends: friends.map((f: mongoose.Types.ObjectId) => f.toString()),
     isPublic,
     createAt,
     downloadCount,
-    _id.toString()
-  );
+    id: _id.toString(),
+  });
 }
 
 export default FileLinkRepository;

@@ -63,6 +63,8 @@ export class FileLinkService implements IFileLinkService {
       createAt: link.createAt,
       downloadCount: link.downloadCount,
       path: clearedPath,
+      name: link.name,
+      description: link.description,
     };
   }
 
@@ -128,25 +130,12 @@ export class FileLinkService implements IFileLinkService {
     return link;
   }
 
-  async generate(
-    ownerId: string,
-    fileInfoId: string,
-    friends: string[],
-    isPublic: boolean
-  ): Promise<FileLink> {
+  async generate(ownerId: string, fileInfoId: string): Promise<FileLink> {
     const exists = await this._fileLinkRepository.existsByFileId(fileInfoId);
     if (exists) throw new LinkAlreadyExistsError();
 
     const link = this._hashProvider.generate(`${ownerId}.${fileInfoId}`);
-    let fileLink = new FileLink(
-      link,
-      ownerId,
-      fileInfoId,
-      friends,
-      isPublic,
-      new Date(),
-      0
-    );
+    let fileLink = new FileLink({ link, ownerId, fileInfoId });
     fileLink = await this._fileLinkRepository.add(fileLink);
 
     return fileLink;
@@ -162,5 +151,17 @@ export class FileLinkService implements IFileLinkService {
     await this._fileLinkRepository.update(fileLink);
 
     return [fileInfo, pathname];
+  }
+
+  async updateName(id: string, name: string): Promise<FileLink> {
+    const fileLink = await this._fileLinkRepository.get(id);
+    fileLink.name = name;
+    return await this._fileLinkRepository.update(fileLink);
+  }
+
+  async updateDescription(id: string, description: string): Promise<FileLink> {
+    const fileLink = await this._fileLinkRepository.get(id);
+    fileLink.description = description;
+    return await this._fileLinkRepository.update(fileLink);
   }
 }

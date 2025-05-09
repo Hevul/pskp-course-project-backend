@@ -10,6 +10,7 @@ import CopyCollisionError from "../errors/CopyCollisionError";
 import CreateCollisionError from "../errors/CreateCollisionError";
 import archiver from "archiver";
 import { Types } from "mongoose";
+import SameDestinationError from "../errors/SameDestinationError";
 
 export class FileService implements IFileService {
   constructor(
@@ -87,25 +88,25 @@ export class FileService implements IFileService {
     const { id, destinationId, newName, overwrite } = options;
     const file = await this._fileInfoRepository.get(id);
 
+    if (file.parent === destinationId) throw new SameDestinationError();
+
     if (newName) file.name = newName;
 
-    if (file.parent !== destinationId) {
-      try {
-        await this._checkNameCollision(
-          file.name,
-          destinationId,
-          file.storage,
-          "move"
-        );
-      } catch (error) {
-        if (error instanceof MoveCollisionError && overwrite)
-          await this.delete(error.conflictingId);
-        else throw error;
-      }
-
-      file.parent = destinationId;
-      await this._fileInfoRepository.update(file);
+    try {
+      await this._checkNameCollision(
+        file.name,
+        destinationId,
+        file.storage,
+        "move"
+      );
+    } catch (error) {
+      if (error instanceof MoveCollisionError && overwrite)
+        await this.delete(error.conflictingId);
+      else throw error;
     }
+
+    file.parent = destinationId;
+    await this._fileInfoRepository.update(file);
 
     return file;
   }

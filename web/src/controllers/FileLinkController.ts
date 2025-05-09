@@ -87,7 +87,7 @@ class FileLinkController {
     const id = req.body.id;
     const user = req.user!;
 
-    const link = await this._fileLinkService.generate(user.id, id, [], true);
+    const link = await this._fileLinkService.generate(user.id, id);
 
     res.status(200).json({ link });
   };
@@ -174,6 +174,21 @@ class FileLinkController {
     await this._fileLinkService.delete(id);
 
     res.good({ message: "Link was deleted!" });
+  };
+
+  updateNameAndDescription = async (
+    req: Request,
+    res: Response,
+    next: NextFunction
+  ): Promise<void> => {
+    const { id, name, description } = req.body;
+
+    await this._fileLinkService.updateName(id, name);
+    const a = await this._fileLinkService.updateDescription(id, description);
+
+    console.log(a);
+
+    res.good({ message: "Name and description were updated!" });
   };
 }
 

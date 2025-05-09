@@ -13,6 +13,8 @@ const fileLinkDbSchema = new mongoose.Schema({
   isPublic: { type: Boolean, required: true },
   createAt: { type: Date, required: true },
   downloadCount: { type: Number, required: true },
+  name: { type: String, required: false },
+  description: { type: String, required: false },
 });
 
 const FileLinkDb = mongoose.model("FileLink", fileLinkDbSchema);

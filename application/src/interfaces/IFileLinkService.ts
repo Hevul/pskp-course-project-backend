@@ -3,12 +3,7 @@ import FileLink from "../../../core/src/entities/FileLink";
 import { FileLinkFullInfoDTO } from "../dtos/FileLinkFullInfoDTO";
 
 export default interface IFileLinkService {
-  generate(
-    ownerId: string,
-    fileInfoId: string,
-    friends: string[],
-    isPublic: boolean
-  ): Promise<FileLink>;
+  generate(ownerId: string, fileInfoId: string): Promise<FileLink>;
   getById(id: string): Promise<FileLink>;
   getByLink(link: string): Promise<[FileLink, FileInfo]>;
   getAllByOwnerId(ownerId: string): Promise<FileLink[]>;
@@ -24,4 +19,6 @@ export default interface IFileLinkService {
     identifier: string | { id: string } | { link: string },
     userId: string
   ): Promise<void>;
+  updateName(id: string, name: string): Promise<FileLink>;
+  updateDescription(id: string, description: string): Promise<FileLink>;
 }

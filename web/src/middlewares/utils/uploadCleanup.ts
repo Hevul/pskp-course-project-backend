@@ -6,12 +6,9 @@ export const uploadCleanup = (
   res: Response,
   next: NextFunction
 ) => {
-  // Сохраняем оригинальный обработчик завершения ответа
   const originalEnd = res.end.bind(res);
 
-  // Переопределяем метод end с правильной сигнатурой
   res.end = function (chunk?: any, encoding?: any, callback?: any): Response {
-    // Если соединение было прервано (отмена загрузки)
     if (req.aborted) {
       const file = req.file as Express.Multer.File;
       if (file?.path) {
