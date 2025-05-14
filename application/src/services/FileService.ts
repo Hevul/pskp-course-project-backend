@@ -1,7 +1,7 @@
 import IFileService from "../interfaces/IFileService";
 import IFileInfoRepository from "../../../core/src/repositories/IFileInfoRepository";
 import IFileRepository from "../../../core/src/repositories/IFileRepository";
-import FileInfo from "../../../core/src/entities/FileInfo";
+import { FileInfo } from "../../../core/src/entities/FileInfo";
 import MoveCollisionError from "../errors/MoveCollisionError";
 import { PassThrough, Readable } from "stream";
 import RenameCollisionError from "../errors/RenameCollisionError";
@@ -155,16 +155,14 @@ export class FileService implements IFileService {
       }
     }
 
-    const newFile = new FileInfo(
-      newName,
-      new Date(),
-      sourceFile.size,
-      sourceFile.storage,
-      parentId,
-      "",
-      undefined,
-      sourceFile.physicalFileId
-    );
+    const newFile = new FileInfo({
+      name: newName,
+      uploadAt: new Date(),
+      size: sourceFile.size,
+      storage: sourceFile.storage,
+      parent: parentId,
+      physicalFileId: sourceFile.physicalFileId,
+    });
 
     const createdFile = await this._fileInfoRepository.add(newFile);
     return createdFile;
@@ -258,8 +256,14 @@ export class FileService implements IFileService {
   ): Promise<FileInfo> {
     await this._checkNameCollision(filename, parentId, storageId, "create");
 
-    const file = new FileInfo(filename, new Date(), size, storageId, parentId);
-    file.physicalFileId = new Types.ObjectId().toString();
+    const file = new FileInfo({
+      name: filename,
+      uploadAt: new Date(),
+      size: size,
+      storage: storageId,
+      parent: parentId,
+      physicalFileId: new Types.ObjectId().toString(),
+    });
     const createdFile = await this._fileInfoRepository.add(file);
 
     try {

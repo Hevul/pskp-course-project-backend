@@ -7,6 +7,7 @@ import {
   FILE_SIZE,
   LOGIN,
   PASSWORD,
+  PHYSICAL_FILE_ID,
   STORAGE_NAME,
 } from "../utils/constants";
 import { FILE_INFO_REPOSITORY_DB } from "../utils/dbs";
@@ -21,6 +22,7 @@ import {
   FileInfoDb,
   FileInfoNotFoundError,
   FileInfoRepository,
+  FileLinkDb,
   User,
   UserDb,
   UserRepository,
@@ -56,6 +58,7 @@ describe("FileInfoRepository", () => {
     await UserDb.deleteMany({});
     await UserStorageDb.deleteMany({});
     await DirInfoDb.deleteMany({});
+    await FileLinkDb.deleteMany({});
   });
 
   const createUserAndStorage = async () => {
@@ -70,13 +73,14 @@ describe("FileInfoRepository", () => {
     storage: UserStorage,
     options?: { parentId: string }
   ) => {
-    const file = new FileInfo(
-      FILE_NAME,
+    const file = new FileInfo({
+      name: FILE_NAME,
       uploadAt,
-      FILE_SIZE,
-      storage.id,
-      options?.parentId
-    );
+      size: FILE_SIZE,
+      storage: storage.id,
+      parent: options?.parentId,
+      physicalFileId: PHYSICAL_FILE_ID,
+    });
 
     return await fileInfoRepository.add(file);
   };

@@ -69,7 +69,8 @@ const userStorageService = new UserStorageService(
   userStorageRepository,
   dirRepository,
   fileInfoRepository,
-  dirInfoRepository
+  dirInfoRepository,
+  fileLinkRepository
 );
 const authService = new AuthService(
   userRepository,

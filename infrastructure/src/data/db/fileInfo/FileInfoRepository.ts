@@ -1,4 +1,5 @@
-import FileInfo from "../../../../../core/src/entities/FileInfo";
+import { FileInfo } from "../../../../../core/src/entities/FileInfo";
+import { FileInfoParams } from "../../../../../core/src/entities/FileInfo";
 import IFileInfoRepository from "../../../../../core/src/repositories/IFileInfoRepository";
 import FileInfoNotFoundError from "./errors/FileInfoNotFoundError";
 import FileInfoDb from "../fileInfo/FileInfoDb";
@@ -180,16 +181,17 @@ class FileInfoRepository implements IFileInfoRepository {
   }
 
   private _mapToFileInfo(fileDoc: any): FileInfo {
-    return new FileInfo(
-      fileDoc.name,
-      fileDoc.uploadAt,
-      fileDoc.size,
-      fileDoc.storage.toString(),
-      fileDoc.parent?.toString(),
-      fileDoc._id.toString(),
-      fileDoc.updateAt,
-      fileDoc.physicalFileId
-    );
+    const params: FileInfoParams = {
+      name: fileDoc.name,
+      uploadAt: fileDoc.uploadAt,
+      size: fileDoc.size,
+      storage: fileDoc.storage.toString(),
+      physicalFileId: fileDoc.physicalFileId,
+      parent: fileDoc.parent?.toString(),
+      updateAt: fileDoc.updateAt,
+      id: fileDoc._id.toString(),
+    };
+    return new FileInfo(params);
   }
 }
 

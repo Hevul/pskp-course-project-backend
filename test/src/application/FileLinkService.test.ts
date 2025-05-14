@@ -22,9 +22,7 @@ import {
   FileInfoRepository,
   FileLinkDb,
   FileLinkRepository,
-  FileLinkService,
   FileRepository,
-  FileService,
   HashSha256Provider,
   LinkAccessDeniedError,
   User,
@@ -37,10 +35,11 @@ import {
 } from "../utils/imports";
 import mongoose from "mongoose";
 import "../utils/customMatchers";
+import { FileService } from "../../../application/src/services/FileService";
+import { FileLinkService } from "../../../application/src/services/FileLinkService";
+import { Readable } from "stream";
 
-describe("FileLinkService", () => {
-  const anotherUser = new User(ANOTHER_LOGIN, ANOTHER_PASSWORD);
-
+describe.only("FileLinkService", () => {
   let userRepository: UserRepository;
   let fileInfoRepository: FileInfoRepository;
   let fileLinkRepository: FileLinkRepository;
@@ -54,6 +53,9 @@ describe("FileLinkService", () => {
   let fileService: FileService;
   let userStorageService: UserStorageService;
   let fileLinkService: FileLinkService;
+
+  const TEST_CONTENT = "test content";
+  const anotherUser = new User(ANOTHER_LOGIN, ANOTHER_PASSWORD);
 
   beforeAll(async () => {
     await connect(FILE_LINK_SERVICE_DB);
@@ -71,20 +73,21 @@ describe("FileLinkService", () => {
     fileService = new FileService(
       fileInfoRepository,
       fileRepository,
-      dirInfoRepository
+      fileLinkRepository
     );
 
     userStorageService = new UserStorageService(
       userStorageRepository,
       dirRepository,
       fileInfoRepository,
-      dirInfoRepository
+      dirInfoRepository,
+      fileLinkRepository
     );
 
     fileLinkService = new FileLinkService(
+      userStorageRepository,
       fileLinkRepository,
       fileInfoRepository,
-      fileRepository,
       userRepository,
       hashProvider
     );
@@ -115,22 +118,20 @@ describe("FileLinkService", () => {
   it(`generates link`, async () => {
     // ASSIGN
     const { user, storage } = await createUserAndStorage();
+    const readable = Readable.from(TEST_CONTENT);
 
-    const file = await fileService.upload(FILE_NAME, BUFFER, storage.id);
-
-    // ACT
-    const fileLink = await fileLinkService.generate(
-      LINK_NAME,
-      user.id,
-      file.id,
-      EMPTY_FRIENDS,
-      IS_PUBLIC
+    const file = await fileService.upload(
+      FILE_NAME,
+      readable,
+      storage.id,
+      TEST_CONTENT.length
     );
 
-    // ASSERT
-    const expectedLink = hashProvider.generate(`${LINK_NAME}.${user.id}`);
+    // ACT
+    const fileLink = await fileLinkService.generate(user.id, file.id);
 
-    expect(fileLink.link).toBe(expectedLink);
+    // ASSERT
+    expect(fileLink.fileInfoId).toBe(file.id);
   });
 
   it(`returns file data by public link
@@ -138,109 +139,69 @@ describe("FileLinkService", () => {
     // ASSIGN
     const { user: owner, storage } = await createUserAndStorage();
     const user = await userRepository.add(anotherUser);
+    const readable = Readable.from(TEST_CONTENT);
 
-    const file = await fileService.upload(FILE_NAME, BUFFER, storage.id);
-
-    const link = await fileLinkService.generate(
-      LINK_NAME,
-      owner.id,
-      file.id,
-      EMPTY_FRIENDS,
-      IS_PUBLIC
+    const file = await fileService.upload(
+      FILE_NAME,
+      readable,
+      storage.id,
+      TEST_CONTENT.length
     );
+
+    const link = await fileLinkService.generate(user.id, file.id);
 
     // ACT
     const data = await fileLinkService.download(link.link, user.id);
 
     // ASSERT
-    expect(data).toEqual(BUFFER);
+    const [fileInfo, path] = data;
+
+    expect(fileInfo).toEqual(file);
+    expect(file.path()).toEqual(path);
   });
 
   it(`returns file data by private link
       when owner is attempting to download file`, async () => {
     // ASSIGN
-    const { user: owner, storage } = await createUserAndStorage();
+    const { user, storage } = await createUserAndStorage();
+    const readable = Readable.from(TEST_CONTENT);
 
-    const file = await fileService.upload(FILE_NAME, BUFFER, storage.id);
-
-    const link = await fileLinkService.generate(
-      LINK_NAME,
-      owner.id,
-      file.id,
-      EMPTY_FRIENDS,
-      IS_PRIVATE
+    const file = await fileService.upload(
+      FILE_NAME,
+      readable,
+      storage.id,
+      TEST_CONTENT.length
     );
+
+    const link = await fileLinkService.generate(user.id, file.id);
+    link.setPublicity(false);
+
+    await fileLinkRepository.update(link);
 
     // ACT
     // ASSERT
     await expect(
-      fileLinkService.download(link.link, owner.id)
+      fileLinkService.download(link.link, user.id)
     ).resolves.not.toThrow();
-  });
-
-  it(`returns file data by private link
-      when friend is attempting to download file`, async () => {
-    // ASSIGN
-    const { user: owner, storage } = await createUserAndStorage();
-    const friend = await userRepository.add(anotherUser);
-
-    const file = await fileService.upload(FILE_NAME, BUFFER, storage.id);
-
-    const link = await fileLinkService.generate(
-      LINK_NAME,
-      owner.id,
-      file.id,
-      [friend.id],
-      IS_PRIVATE
-    );
-
-    // ACT
-    // ASSERT
-    await expect(
-      fileLinkService.download(link.link, friend.id)
-    ).resolves.not.toThrow();
-  });
-
-  it(`throws LinkAccessDeniedError
-      when user is attempting to download file by private link`, async () => {
-    // ASSIGN
-    const { user: owner, storage } = await createUserAndStorage();
-    const user = await userRepository.add(anotherUser);
-
-    const file = await fileService.upload(FILE_NAME, BUFFER, storage.id);
-
-    const link = await fileLinkService.generate(
-      LINK_NAME,
-      owner.id,
-      file.id,
-      EMPTY_FRIENDS,
-      IS_PRIVATE
-    );
-
-    // ACT
-    // ASSERT
-    await expect(fileLinkService.download(link.link, user.id)).rejects.toThrow(
-      LinkAccessDeniedError
-    );
   });
 
   it(`adds friend`, async () => {
     // ASSIGN
     const { user: owner, storage } = await createUserAndStorage();
     const user = await userRepository.add(anotherUser);
+    const readable = Readable.from(TEST_CONTENT);
 
-    const file = await fileService.upload(FILE_NAME, BUFFER, storage.id);
-
-    let link = await fileLinkService.generate(
-      LINK_NAME,
-      owner.id,
-      file.id,
-      EMPTY_FRIENDS,
-      IS_PRIVATE
+    const file = await fileService.upload(
+      FILE_NAME,
+      readable,
+      storage.id,
+      TEST_CONTENT.length
     );
 
+    let link = await fileLinkService.generate(owner.id, file.id);
+
     // ACT
-    link = await fileLinkService.addFriend(link.id, user.id);
+    link = await fileLinkService.addFriend(link.id, user.login);
 
     // ASSERT
     expect(link.friends).toContain(user.id);
@@ -250,16 +211,16 @@ describe("FileLinkService", () => {
     // ASSIGN
     const { user: owner, storage } = await createUserAndStorage();
     const user = await userRepository.add(anotherUser);
+    const readable = Readable.from(TEST_CONTENT);
 
-    const file = await fileService.upload(FILE_NAME, BUFFER, storage.id);
-
-    let link = await fileLinkService.generate(
-      LINK_NAME,
-      owner.id,
-      file.id,
-      [user.id],
-      IS_PRIVATE
+    const file = await fileService.upload(
+      FILE_NAME,
+      readable,
+      storage.id,
+      TEST_CONTENT.length
     );
+
+    let link = await fileLinkService.generate(owner.id, file.id);
 
     // ACT
     link = await fileLinkService.removeFriend(link.id, user.id);

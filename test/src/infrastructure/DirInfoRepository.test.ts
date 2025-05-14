@@ -84,8 +84,6 @@ describe.only("DirInfoRepository", () => {
     expect(dirInfo).toBeInstanceOf(DirInfo);
     expect(dirInfo.parent).toBeUndefined();
     expect(dirInfo.name).toBe(DIR_NAME);
-    expect(dirInfo.files.length).toBe(0);
-    expect(dirInfo.subdirectories.length).toBe(0);
     expect(dirInfo.storage).toBe(storage.id);
     expect(dirInfo.uploadAt).toBe(uploadAt);
   });
@@ -214,26 +212,6 @@ describe.only("DirInfoRepository", () => {
     );
   });
 
-  it(`updates dirInfo
-      when dirInfo exists`, async () => {
-    // ASSIGN
-    const { user, storage } = await createUserAndStorage();
-
-    const dir = await createDirInfo(storage);
-    const subdir = await createDirInfo(storage, {
-      name: SUBDIR_NAME,
-      parentId: dir.id,
-    });
-
-    dir.addSubdirectory(subdir.id);
-
-    // ACT
-    const updatedDir = await dirInfoRepository.update(dir);
-
-    // ASSERT
-    expect(updatedDir.subdirectories).toEqual([subdir.id]);
-  });
-
   it(`deletes dirInfo
       when dirInfo exists`, async () => {
     // ASSIGN
@@ -270,34 +248,6 @@ describe.only("DirInfoRepository", () => {
 
     expect(dirExists).toBe(false);
     expect(subdirExists).toBe(true);
-  });
-
-  it(`recursively deletes dirInfo and its child
-      when force mode on`, async () => {
-    // ASSIGN
-    const { user, storage } = await createUserAndStorage();
-
-    const dir = await createDirInfo(storage);
-    const subdir = await createDirInfo(storage, {
-      name: SUBDIR_NAME,
-      parentId: dir.id,
-    });
-    const subSubdir = await createDirInfo(storage, {
-      name: SUB_SUBDIR_NAME,
-      parentId: subdir.id,
-    });
-
-    // ACT
-    await dirInfoRepository.delete(dir.id, true);
-
-    // ASSERT
-    const isDirExists = await dirInfoRepository.exists(dir.id);
-    const isSubdirExists = await dirInfoRepository.exists(subdir.id);
-    const isSubSubdirExists = await dirInfoRepository.exists(subSubdir.id);
-
-    expect(isDirExists).toBe(false);
-    expect(isSubdirExists).toBe(false);
-    expect(isSubSubdirExists).toBe(false);
   });
 
   it(`throws DirInfoNotFoundError

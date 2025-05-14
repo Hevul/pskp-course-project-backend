@@ -1,5 +1,5 @@
 import { Readable } from "stream";
-import FileInfo from "../../../core/src/entities/FileInfo";
+import { FileInfo } from "../../../core/src/entities/FileInfo";
 
 export default interface IFileService {
   upload(

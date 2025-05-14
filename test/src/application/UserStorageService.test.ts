@@ -7,6 +7,7 @@ import {
   FILE_SIZE,
   LOGIN,
   PASSWORD,
+  PHYSICAL_FILE_ID,
   STORAGE_NAME,
   STORAGE_NEW_NAME,
 } from "../utils/constants";
@@ -21,7 +22,9 @@ import {
   FileInfo,
   FileInfoDb,
   FileInfoRepository,
+  FileLinkRepository,
   FileRepository,
+  IFileLinkRepository,
   User,
   UserDb,
   UserNotFoundError,
@@ -37,29 +40,30 @@ import "../utils/customMatchers";
 
 describe("UserStorageService", () => {
   let userStorageRepository: UserStorageRepository;
-  let fileRepository: FileRepository;
   let dirRepository: DirRepository;
   let userRepository: UserRepository;
   let fileInfoRepository: FileInfoRepository;
   let dirInfoRepository: DirInfoRepository;
+  let fileLinkRepository: IFileLinkRepository;
 
   let userStorageService: UserStorageService;
 
   beforeAll(async () => {
     await connect(USER_STORAGE_SERVICE_DB);
 
-    fileRepository = new FileRepository(USER_STORAGE_SERVICE_LS);
     dirRepository = new DirRepository(USER_STORAGE_SERVICE_LS);
     userStorageRepository = new UserStorageRepository();
     userRepository = new UserRepository();
     fileInfoRepository = new FileInfoRepository();
     dirInfoRepository = new DirInfoRepository();
+    fileLinkRepository = new FileLinkRepository();
 
     userStorageService = new UserStorageService(
       userStorageRepository,
       dirRepository,
       fileInfoRepository,
-      dirInfoRepository
+      dirInfoRepository,
+      fileLinkRepository
     );
   });
 
@@ -172,7 +176,13 @@ describe("UserStorageService", () => {
     const { user, storage } = await createUserAndStorage();
 
     const file = await fileInfoRepository.add(
-      new FileInfo(FILE_NAME, new Date(), FILE_SIZE, storage.id)
+      new FileInfo({
+        name: FILE_NAME,
+        uploadAt: new Date(),
+        size: FILE_SIZE,
+        storage: storage.id,
+        physicalFileId: PHYSICAL_FILE_ID,
+      })
     );
     const dir = await dirInfoRepository.add(
       new DirInfo(DIR_NAME, new Date(), storage.id)

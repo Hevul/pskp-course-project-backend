@@ -1,4 +1,4 @@
-import FileInfo from "../../../core/src/entities/FileInfo";
+import { FileInfo } from "../../../core/src/entities/FileInfo";
 import FileLink from "../../../core/src/entities/FileLink";
 import IFileInfoRepository from "../../../core/src/repositories/IFileInfoRepository";
 import IFileLinkRepository from "../../../core/src/repositories/IFileLinkRepository";
@@ -125,9 +125,8 @@ export class FileLinkService implements IFileLinkService {
 
     let link = await this._fileLinkRepository.get(id);
     link.addFriend(user.id);
-    await this._fileLinkRepository.update(link);
 
-    return link;
+    return await this._fileLinkRepository.update(link);
   }
 
   async generate(ownerId: string, fileInfoId: string): Promise<FileLink> {

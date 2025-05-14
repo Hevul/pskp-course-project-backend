@@ -3,12 +3,10 @@
 export { default as IUserService } from "../../../application/src/interfaces/IUserService";
 //  - Services
 export { default as DirService } from "../../../application/src/services/DirService";
-export { default as FileService } from "../../../application/src/services/FileService";
-export { default as FileLinkService } from "../../../application/src/services/FileLinkService";
+
 export { default as UserService } from "../../../application/src/services/UserService";
 export { default as UserStorageService } from "../../../application/src/services/UserStorageService";
 //  - Error
-export { default as DirectoryMoveError } from "../../../application/src/errors/DirectoryMoveError";
 export { default as LinkAccessDeniedError } from "../../../application/src/errors/LinkAccessDeniedError";
 export { default as UserNotFileOwnerError } from "../../../application/src/errors/UserNotFileOwnerError";
 export { default as UserAlreadyRegisteredError } from "../../../application/src/errors/UserAlreadyRegisteredError";
@@ -18,7 +16,7 @@ export { default as InvalidLoginError } from "../../../application/src/errors/In
 // Core
 //  - Entities
 export { default as DirInfo } from "../../../core/src/entities/DirInfo";
-export { default as FileInfo } from "../../../core/src/entities/FileInfo";
+export { FileInfo } from "../../../core/src/entities/FileInfo";
 export { default as FileLink } from "../../../core/src/entities/FileLink";
 export { default as User } from "../../../core/src/entities/User";
 export { default as UserStorage } from "../../../core/src/entities/UserStorage";

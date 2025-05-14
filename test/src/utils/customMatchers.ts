@@ -1,3 +1,4 @@
+import { promises as fs } from "fs";
 import IUserRepository from "../../../core/src/repositories/IUserRepository";
 import {
   DirInfo,
@@ -13,6 +14,7 @@ import { Response } from "express";
 declare global {
   namespace jest {
     interface Matchers<R = unknown> {
+      toExistInFileSystem(): R;
       toExistInStorage(repo: StorageRepository): Promise<R>;
       toExistInDatabase(
         repo:
@@ -32,6 +34,22 @@ declare global {
 }
 
 expect.extend({
+  async toExistInFileSystem(this: jest.MatcherContext, received: string) {
+    try {
+      await fs.access(received);
+      return {
+        pass: true,
+        message: () =>
+          `Expected file at path "${received}" not to exist, but it does`,
+      };
+    } catch {
+      return {
+        pass: false,
+        message: () =>
+          `Expected file at path "${received}" to exist, but it doesn't`,
+      };
+    }
+  },
   async toExistInStorage(path: string, storage: StorageRepository) {
     const exists = await storage.exists(path);
     const pass = exists;
@@ -68,21 +86,6 @@ expect.extend({
     return {
       pass,
       message: () => `expected child ${pass ? "not " : ""}to have parent`,
-    };
-  },
-
-  toBeParentTo(parent: DirInfo, child: DirInfo | FileInfo) {
-    const existsInFiles = parent.files.includes(child.id);
-    const existsInSubdirectories = parent.subdirectories.includes(child.id);
-
-    const isParentOfChild = child.parent === parent.id;
-
-    const pass = isParentOfChild && (existsInFiles || existsInSubdirectories);
-
-    return {
-      pass,
-      message: () =>
-        `expected entity ${pass ? "not " : ""}to be a child of parent`,
     };
   },
 

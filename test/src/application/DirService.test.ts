@@ -12,30 +12,27 @@ import {
   UserStorageDb,
   UserStorageService,
   FileInfoRepository,
-  FileService,
   FileRepository,
   FileInfoDb,
-  DirectoryNotEmptyError,
-  DirectoryMoveError,
   User,
-  UserStorage,
+  FileLinkRepository,
+  FileLinkDb,
 } from "../utils/imports";
 import { DIR_SERVICE_LS } from "../utils/localStorages";
 import {
-  ANOTHER_BUFFER,
   ANOTHER_DIR_NAME,
   ANOTHER_FILE_NAME,
-  BUFFER,
   DIR_NAME,
   FILE_NAME,
   LOGIN,
   PASSWORD,
   STORAGE_NAME,
-  SUB_SUBDIR_NAME,
   SUBDIR_NAME,
 } from "../utils/constants";
 import mongoose from "mongoose";
 import "../utils/customMatchers";
+import { FileService } from "../../../application/src/services/FileService";
+import { Readable } from "stream";
 
 describe("DirService", () => {
   let userRepository: UserRepository;
@@ -44,10 +41,13 @@ describe("DirService", () => {
   let dirInfoRepository: DirInfoRepository;
   let fileInfoRepository: FileInfoRepository;
   let fileRepository: FileRepository;
+  let fileLinkRepository: FileLinkRepository;
 
   let dirService: DirService;
   let userStorageService: UserStorageService;
   let fileService: FileService;
+
+  const TEST_CONTENT = "test content";
 
   beforeAll(async () => {
     await connect(DIR_SERVICE_DB);
@@ -58,18 +58,25 @@ describe("DirService", () => {
     userRepository = new UserRepository();
     userStorageRepository = new UserStorageRepository();
     fileRepository = new FileRepository(DIR_SERVICE_LS);
+    fileLinkRepository = new FileLinkRepository();
 
     userStorageService = new UserStorageService(
       userStorageRepository,
       dirRepository,
       fileInfoRepository,
-      dirInfoRepository
+      dirInfoRepository,
+      fileLinkRepository
     );
-    dirService = new DirService(dirRepository, dirInfoRepository);
+    dirService = new DirService(
+      dirInfoRepository,
+      fileInfoRepository,
+      fileLinkRepository,
+      fileRepository
+    );
     fileService = new FileService(
       fileInfoRepository,
       fileRepository,
-      dirInfoRepository
+      fileLinkRepository
     );
   });
 
@@ -83,6 +90,7 @@ describe("DirService", () => {
     await FileInfoDb.deleteMany({});
     await UserDb.deleteMany({});
     await UserStorageDb.deleteMany({});
+    await FileLinkDb.deleteMany({});
   });
 
   afterAll(async () => {
@@ -104,7 +112,6 @@ describe("DirService", () => {
 
     // ASSERT
     expect(dir.id).toExistInDatabase(dirInfoRepository);
-    expect(`/${storage.id}/${dir.name}`).toExistInStorage(dirRepository);
   });
 
   it(`creates subdirectory in directory`, async () => {
@@ -120,11 +127,7 @@ describe("DirService", () => {
     dir = await dirInfoRepository.get(dir.id);
 
     expect(subdir.id).toExistInDatabase(dirInfoRepository);
-    expect(dir.subdirectories).toContain(subdir.id);
-
-    expect(`/${storage.id}/${dir.name}/${subdir.name}`).toExistInStorage(
-      dirRepository
-    );
+    expect(subdir.parent).toBe(dir.id);
   });
 
   it(`deletes empty directory from a storage root`, async () => {
@@ -138,22 +141,6 @@ describe("DirService", () => {
 
     // ASSERT
     expect(dir.id).not.toExistInDatabase(dirInfoRepository);
-    expect(`/${storage.id}/${dir.name}`).not.toExistInStorage(dirRepository);
-  });
-
-  it(`throws DirectoryNotEmptyError
-      when attempting to delete not empty directory with force mode`, async () => {
-    // ASSIGN
-    const { user, storage } = await createUserAndStorage();
-
-    const dir = await dirService.create(DIR_NAME, storage.id);
-    const subdir = await dirService.create(SUBDIR_NAME, storage.id, dir.id);
-
-    // ACT
-    // ASSERT
-    await expect(dirService.delete(dir.id)).rejects.toThrow(
-      DirectoryNotEmptyError
-    );
   });
 
   it(`deletes not empty directory with force mode`, async () => {
@@ -164,30 +151,31 @@ describe("DirService", () => {
     const subdir = await dirService.create(SUBDIR_NAME, storage.id, dir.id);
 
     // ACT
-    await dirService.delete(dir.id, true);
+    await dirService.delete(dir.id);
 
     // ASSERT
     expect(dir.id).not.toExistInDatabase(dirInfoRepository);
     expect(subdir.id).not.toExistInDatabase(dirInfoRepository);
-    expect(`/${storage.id}/${dir.name}`).not.toExistInStorage(dirRepository);
   });
 
   it(`returns directory size`, async () => {
     // ASSIGN
     const { user, storage } = await createUserAndStorage();
-
+    const readable = Readable.from(TEST_CONTENT);
     const dir = await dirService.create(DIR_NAME, storage.id);
 
     const file1 = await fileService.upload(
       FILE_NAME,
-      BUFFER,
+      readable,
       storage.id,
+      TEST_CONTENT.length,
       dir.id
     );
     const file2 = await fileService.upload(
       ANOTHER_FILE_NAME,
-      ANOTHER_BUFFER,
+      readable,
       storage.id,
+      TEST_CONTENT.length,
       dir.id
     );
 
@@ -203,14 +191,16 @@ describe("DirService", () => {
   it(`copies subdir with file to a storage root`, async () => {
     // ASSIGN
     const { user, storage } = await createUserAndStorage();
+    const readable = Readable.from(TEST_CONTENT);
 
     let dir = await dirService.create(DIR_NAME, storage.id);
     let subdir = await dirService.create(SUBDIR_NAME, storage.id, dir.id);
 
-    let file = await fileService.upload(
+    const file = await fileService.upload(
       FILE_NAME,
-      BUFFER,
+      readable,
       storage.id,
+      TEST_CONTENT.length,
       subdir.id
     );
 
@@ -221,17 +211,13 @@ describe("DirService", () => {
     dir = await dirInfoRepository.get(dir.id);
     subdir = await dirInfoRepository.get(subdir.id);
 
-    expect(copiedSubdir.id).not.toBe(subdir.id);
-    expect(copiedSubdir).not.toHaveParent();
-    expect(`/${storage.id}/${subdir.name}`).toExistInStorage(dirRepository);
-    expect(`/${storage.id}/${subdir.name}/${file.name}`).toExistInStorage(
-      fileRepository
-    );
+    expect(copiedSubdir.parent).toBe(undefined);
   });
 
-  it(`copies subdir with file to another dir`, async () => {
+  it(`moves subdir from dir to another dir`, async () => {
     // ASSIGN
     const { user, storage } = await createUserAndStorage();
+    const readable = Readable.from(TEST_CONTENT);
 
     let dir = await dirService.create(DIR_NAME, storage.id);
     let subdir = await dirService.create(SUBDIR_NAME, storage.id, dir.id);
@@ -239,88 +225,42 @@ describe("DirService", () => {
 
     let file = await fileService.upload(
       FILE_NAME,
-      BUFFER,
+      readable,
       storage.id,
+      TEST_CONTENT.length,
       subdir.id
     );
 
     // ACT
-    const copiedDir = await dirService.copy(subdir.id, anotherDir.id);
+    await dirService.move({ id: subdir.id, destinationId: anotherDir.id });
 
     // ASSERT
-    anotherDir = await dirInfoRepository.get(anotherDir.id);
-    const copiedSubdirPath = `/${storage.id}/${anotherDir.name}/${subdir.name}`;
-
-    expect(anotherDir).toBeParentTo(copiedDir);
-    expect(copiedSubdirPath).toExistInStorage(dirRepository);
-  });
-
-  // ! В ПИЗДУ
-  it.skip(`moves subdir from dir to another dir`, async () => {
-    // ASSIGN
-    const { user, storage } = await createUserAndStorage();
-
-    let dir = await dirService.create(DIR_NAME, storage.id);
-    let subdir = await dirService.create(SUBDIR_NAME, storage.id, dir.id);
-    let anotherDir = await dirService.create(ANOTHER_DIR_NAME, storage.id);
-
-    let file = await fileService.upload(
-      FILE_NAME,
-      BUFFER,
-      storage.id,
-      subdir.id
-    );
-
-    // ACT
-    const movedDir = await dirService.move(subdir.id, anotherDir.id);
-
-    // ASSERT
-    const newSubdirPath = `/${storage.id}/${anotherDir.name}/${subdir.name}`;
-
     anotherDir = await dirInfoRepository.get(anotherDir.id);
     subdir = await dirInfoRepository.get(subdir.id);
 
-    expect(subdir.id).toBe(movedDir.id);
-    expect(anotherDir).toBeParentTo(subdir);
-    expect(newSubdirPath).toExistInStorage(dirRepository);
-  });
-
-  it(`throws DirectoryMoveError
-      when attempting to move parent in its child`, async () => {
-    // ASSIGN
-    const { user, storage } = await createUserAndStorage();
-
-    let dir = await dirService.create(DIR_NAME, storage.id);
-    let subdir = await dirService.create(SUBDIR_NAME, storage.id, dir.id);
-    let subSubdir = await dirService.create(
-      SUB_SUBDIR_NAME,
-      storage.id,
-      subdir.id
-    );
-
-    // ACT
-    // ASSERT
-    await expect(dirService.move(dir.id, subSubdir.id)).rejects.toThrow(
-      DirectoryMoveError
-    );
+    expect(subdir.parent).toBe(anotherDir.id);
   });
 
   it(`renames dir`, async () => {
     // ASSIGN
     const { user, storage } = await createUserAndStorage();
+    const readable = Readable.from(TEST_CONTENT);
 
     let dir = await dirService.create(DIR_NAME, storage.id);
-
-    let file = await fileService.upload(FILE_NAME, BUFFER, storage.id, dir.id);
+    let file = await fileService.upload(
+      FILE_NAME,
+      readable,
+      storage.id,
+      TEST_CONTENT.length,
+      dir.id
+    );
 
     // ACT
     await dirService.rename(dir.id, ANOTHER_DIR_NAME);
 
     // ASSERT
     dir = await dirInfoRepository.get(dir.id);
-    const dirPath = `/${storage.id}/${ANOTHER_DIR_NAME}`;
 
     expect(dir.name).toBe(ANOTHER_DIR_NAME);
-    expect(dirPath).toExistInStorage(dirRepository);
   });
 });

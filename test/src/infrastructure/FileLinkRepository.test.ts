@@ -30,6 +30,8 @@ import {
   EMPTY_FRIENDS,
   IS_PUBLIC,
   IS_PRIVATE,
+  PHYSICAL_FILE_ID,
+  FAKE_USER_ID,
 } from "../utils/constants";
 import "../utils/customMatchers";
 import FileLinkAlreadyExistsError from "../../../infrastructure/src/data/db/fileLink/errors/FileLinkAlreadyExists";
@@ -74,13 +76,14 @@ describe("FileLinkRepository", () => {
     storage: UserStorage,
     options?: { parentId: string }
   ) => {
-    const file = new FileInfo(
-      FILE_NAME,
+    const file = new FileInfo({
+      name: FILE_NAME,
       uploadAt,
-      FILE_SIZE,
-      storage.id,
-      options?.parentId
-    );
+      size: FILE_SIZE,
+      storage: storage.id,
+      parent: options?.parentId,
+      physicalFileId: PHYSICAL_FILE_ID,
+    });
 
     return await fileInfoRepository.add(file);
   };
@@ -92,14 +95,14 @@ describe("FileLinkRepository", () => {
   ) => {
     const friends = options?.friends ?? EMPTY_FRIENDS;
 
-    const link = new FileLink(
-      LINK_LINK,
-      LINK_NAME,
-      user.id,
-      file.id,
+    const link = new FileLink({
+      link: LINK_LINK,
+      name: LINK_NAME,
+      ownerId: user.id,
+      fileInfoId: file.id,
       friends,
-      options?.isPublic
-    );
+      isPublic: options?.isPublic,
+    });
 
     return await fileLinkRepository.add(link);
   };
@@ -205,13 +208,10 @@ describe("FileLinkRepository", () => {
   it(`updates link`, async () => {
     // ASSIGN
     const { user, storage } = await createUserAndStorage();
-
     const file = await createFileInfo(storage);
-
     const link = await createFileLink(user, file);
 
     // ACT
-    link.addFriend(user.id);
     link.link = ANOTHER_LINK_LINK;
     link.name = ANOTHER_LINK_NAME;
     link.setPublicity(IS_PRIVATE);

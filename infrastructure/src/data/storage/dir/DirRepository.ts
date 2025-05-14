@@ -6,34 +6,6 @@ import DirectoryNotFoundError from "./errors/DirectoryNotFoundError";
 import StorageRepository from "../StorageRepository";
 
 class DirRepository extends StorageRepository implements IDirRepository {
-  async copy(oldPath: string, newPath: string): Promise<void> {
-    await this.mkdir(newPath);
-
-    const entries = await fs.readdir(`${super.dir}${oldPath}`, {
-      withFileTypes: true,
-    });
-
-    for (const entry of entries) {
-      const oldEntryPath = join(`${super.dir}${oldPath}`, entry.name);
-      const newEntryPath = join(`${super.dir}${newPath}`, entry.name);
-
-      if (entry.isDirectory()) {
-        await this.copy(`${oldPath}/${entry.name}`, `${newPath}/${entry.name}`);
-      } else {
-        await fs.copyFile(oldEntryPath, newEntryPath);
-      }
-    }
-  }
-
-  async rename(oldPath: string, newPath: string): Promise<void> {
-    if (!(await super.exists(oldPath))) throw new DirectoryNotFoundError();
-
-    if (await super.exists(newPath)) throw new DirectoryAlreadyExistsError();
-
-    await this.copy(oldPath, newPath);
-    await this.rm(oldPath);
-  }
-
   async rm(path: string): Promise<void> {
     const isDirExists = await super.exists(path);
 

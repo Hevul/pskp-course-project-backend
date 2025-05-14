@@ -25,6 +25,7 @@ export const FILE_NAME = "file-name";
 export const ANOTHER_FILE_NAME = "another-file-name";
 export const FILE_SIZE = 0;
 export const FAKE_FILE_ID = "fake-file-id";
+export const PHYSICAL_FILE_ID = "physical-file-id";
 
 // FileLink
 export const LINK_ID = "file-link-id";

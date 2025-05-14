@@ -5,23 +5,39 @@ import NameTooLongError from "../errors/NameTooLongError";
 import NonPrintableCharactersError from "../errors/NonPrintableCharactersError";
 import ReservedNameError from "../errors/ReservedNameError";
 
-class FileInfo {
+export interface FileInfoParams {
+  name: string;
+  uploadAt: Date;
+  size: number;
+  storage: string;
+  physicalFileId: string;
+  parent?: string;
+  id?: string;
+  updateAt?: Date;
+}
+
+export class FileInfo {
   private _name: string;
 
-  constructor(
-    name: string,
-    public uploadAt: Date,
-    public size: number,
-    public storage: string,
-    public parent?: string,
-    public id: string = "",
-    public updateAt?: Date,
-    public physicalFileId: string = id
-  ) {
-    this.validateName(name);
-    this._name = name;
-    this.physicalFileId = physicalFileId || id;
+  constructor(params: FileInfoParams) {
+    this.validateName(params.name);
+    this._name = params.name;
+    this.uploadAt = params.uploadAt;
+    this.size = params.size;
+    this.storage = params.storage;
+    this.parent = params.parent;
+    this.id = params.id || "";
+    this.updateAt = params.updateAt;
+    this.physicalFileId = params.physicalFileId || this.id;
   }
+
+  public uploadAt: Date;
+  public size: number;
+  public storage: string;
+  public parent?: string;
+  public id: string;
+  public updateAt?: Date;
+  public physicalFileId: string;
 
   public get name(): string {
     return this._name;
@@ -53,5 +69,3 @@ class FileInfo {
     return `/${this.storage}/${this.physicalFileId}`;
   }
 }
-
-export default FileInfo;

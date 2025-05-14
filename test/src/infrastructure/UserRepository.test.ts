@@ -49,7 +49,9 @@ describe("UserRepository", () => {
       when user exists`, async () => {
     await userRepository.add(user);
 
-    expect(await userRepository.exists(LOGIN)).toBe(true);
+    const exists = await userRepository.existsByLogin(LOGIN);
+
+    expect(exists).toBe(true);
   });
 
   it(`returns false 

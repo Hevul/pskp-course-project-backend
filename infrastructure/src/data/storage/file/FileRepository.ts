@@ -48,48 +48,6 @@ class FileRepository extends StorageRepository implements IFileRepository {
 
     await fs.unlink(path);
   }
-
-  async move(oldPathname: string, newPathname: string): Promise<void> {
-    const fullOldPath = `${super.dir}${oldPathname}`;
-    const fullNewPath = `${super.dir}${newPathname}`;
-
-    if (!(await super.exists(oldPathname))) throw new FileNotFoundError();
-    if (await super.exists(newPathname)) throw new FileAlreadyExistsError();
-
-    await fs.rename(fullOldPath, fullNewPath);
-  }
-
-  async copy(
-    sourcePathname: string,
-    destinationPathname: string
-  ): Promise<void> {
-    const fullSourcePath = `${super.dir}${sourcePathname}`;
-    const fullDestinationPath = `${super.dir}${destinationPathname}`;
-
-    if (!(await super.exists(sourcePathname))) throw new FileNotFoundError();
-
-    if (await super.exists(destinationPathname))
-      throw new FileAlreadyExistsError();
-
-    const readStream = createReadStream(fullSourcePath);
-    const writeStream = createWriteStream(fullDestinationPath);
-
-    try {
-      await pipeline(readStream, writeStream);
-    } catch (error) {
-      try {
-        if (await super.exists(destinationPathname)) {
-          await fs.unlink(fullDestinationPath);
-        }
-      } catch (cleanupError) {
-        console.error("Failed to cleanup after failed copy:", cleanupError);
-      }
-      throw error;
-    } finally {
-      if (!readStream.destroyed) readStream.destroy();
-      if (!writeStream.destroyed) writeStream.destroy();
-    }
-  }
 }
 
 export default FileRepository;

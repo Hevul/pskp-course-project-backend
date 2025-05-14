@@ -7,7 +7,7 @@ import MoveCollisionError from "../errors/MoveCollisionError";
 import CopyCollisionError from "../errors/CopyCollisionError";
 import { DirInfoFullInfoDTO } from "../dtos/DirInfoFullInfoDTO";
 import CreateCollisionError from "../errors/CreateCollisionError";
-import FileInfo from "../../../core/src/entities/FileInfo";
+import { FileInfo } from "../../../core/src/entities/FileInfo";
 import IFileInfoRepository from "../../../core/src/repositories/IFileInfoRepository";
 import IFileRepository from "../../../core/src/repositories/IFileRepository";
 import RenameCollisionError from "../errors/RenameCollisionError";
@@ -226,16 +226,14 @@ class DirService implements IDirService {
 
     await Promise.all(
       files.map(async (file) => {
-        const newFile = new FileInfo(
-          file.name,
-          new Date(),
-          file.size,
-          file.storage,
-          targetDirId,
-          "",
-          undefined,
-          file.physicalFileId
-        );
+        const newFile = new FileInfo({
+          name: file.name,
+          uploadAt: new Date(),
+          size: file.size,
+          storage: file.storage,
+          parent: targetDirId,
+          physicalFileId: file.physicalFileId,
+        });
         await this._fileInfoRepository.add(newFile);
       })
     );

@@ -1,5 +1,5 @@
 import DirInfo from "../../../core/src/entities/DirInfo";
-import FileInfo from "../../../core/src/entities/FileInfo";
+import { FileInfo } from "../../../core/src/entities/FileInfo";
 import FileLink from "../../../core/src/entities/FileLink";
 import UserStorage from "../../../core/src/entities/UserStorage";
 import IDirInfoRepository from "../../../core/src/repositories/IDirInfoRepository";

@@ -6,13 +6,15 @@ import IFileInfoRepository from "../../../core/src/repositories/IFileInfoReposit
 import IDirInfoRepository from "../../../core/src/repositories/IDirInfoRepository";
 import UserStorageNotEmptyError from "../errors/UserStorageNotEmptyError";
 import { UserStorageFullInfoDTO } from "../dtos/UserStorageFullInfoDTO";
+import IFileLinkRepository from "../../../core/src/repositories/IFileLinkRepository";
 
 class UserStorageService implements IUserStorageService {
   constructor(
     private readonly _userStorageRepository: IUserStorageRepository,
     private readonly _dirRepository: IDirRepository,
     private readonly _fileInfoRepository: IFileInfoRepository,
-    private readonly _dirInfoRepository: IDirInfoRepository
+    private readonly _dirInfoRepository: IDirInfoRepository,
+    private readonly _fileLinkRepository: IFileLinkRepository
   ) {}
 
   async getFullInfo(id: string): Promise<UserStorageFullInfoDTO> {
@@ -51,6 +53,9 @@ class UserStorageService implements IUserStorageService {
       if (hasStorageChild) throw new UserStorageNotEmptyError();
     }
 
+    await Promise.all(
+      storageFiles.map((f) => this._fileLinkRepository.deleteByFileInfoId(f.id))
+    );
     await Promise.all(
       storageFiles.map((f) => this._fileInfoRepository.delete(f.id))
     );
