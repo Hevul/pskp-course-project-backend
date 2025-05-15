@@ -7,6 +7,12 @@ const config = {
   tempDir: json.tempDir,
   clearCheckInterval: json.clearCheckInterval,
   tempFileMaxAge: json.tempFileMaxAge,
+  port: json.port,
+  address: json.address,
+  maxFileSize: json.maxFileSize,
+  corsSocket: json.corsSocket,
+  apiPrefix: json.apiPrefix,
+  env: json.env,
 };
 
 export default config;

@@ -7,48 +7,71 @@ import cookieParser from "cookie-parser";
 import box from "./box";
 import { setupTempFileCleanup } from "./utils/cleaner";
 import path from "path";
+import { createDirIfNotExists } from "./utils/createDirIfNotExists";
+import health from "./middlewares/utils/health";
+import { notFoundHandler } from "./middlewares/utils/notFoundHandler";
+import { errorHandler } from "./middlewares/utils/errorHandler";
 
-connect(config.dbConnectionString);
+async function init() {
+  try {
+    await createDirIfNotExists(config.tempDir);
+    await createDirIfNotExists(config.uploadDir);
 
-const cleanup = setupTempFileCleanup({
-  tempDir: config.tempDir,
-  maxFileAge: config.tempFileMaxAge,
-  interval: config.clearCheckInterval,
-});
+    await connect(config.dbConnectionString);
 
-const app = express();
+    const cleanup = setupTempFileCleanup({
+      tempDir: config.tempDir,
+      maxFileAge: config.tempFileMaxAge,
+      interval: config.clearCheckInterval,
+    });
 
-app
-  .use(
-    cors({
-      origin: "http://localhost:3000",
-      credentials: true,
-    })
-  )
-  .use(express.static(path.join(__dirname, "../public")))
-  .use("/", (req, res, next) => {
-    console.log(req.url);
-    next();
-  })
-  .use(express.json({ limit: "5gb" }))
-  .use(express.urlencoded({ limit: "5gb", extended: true }))
-  .use(cookieParser())
-  .use(extendResponse);
+    const app = express();
 
-app
-  .use("/api/auth", box.authRouter)
-  .use("/api/user", box.userRouter)
-  .use("/api/file", box.fileRouter)
-  .use("/api/dir", box.dirRouter)
-  .use("/api/storage", box.storageRouter)
-  .use("/api/link", box.linkRouter)
-  .use("/api/entity", box.entityRouter);
+    app
+      .use(
+        cors({
+          origin: `http://${config.corsSocket}`,
+          credentials: true,
+        })
+      )
+      .use("/", (req, res, next) => {
+        console.log(req.url);
+        next();
+      })
+      .use(express.json({ limit: config.maxFileSize }))
+      .use(express.urlencoded({ limit: config.maxFileSize, extended: true }))
+      .use(cookieParser())
+      .use(extendResponse);
 
-process.on("SIGTERM", () => {
-  cleanup();
-  server.close();
-});
+    app
+      .use(`${config.apiPrefix}/auth`, box.authRouter)
+      .use(`${config.apiPrefix}/user`, box.userRouter)
+      .use(`${config.apiPrefix}/file`, box.fileRouter)
+      .use(`${config.apiPrefix}/dir`, box.dirRouter)
+      .use(`${config.apiPrefix}/storage`, box.storageRouter)
+      .use(`${config.apiPrefix}/link`, box.linkRouter)
+      .use(`${config.apiPrefix}/entity`, box.entityRouter)
+      .use(`${config.apiPrefix}/health`, health);
 
-const server = app.listen(3001);
+    app.use(notFoundHandler);
+    app.use(errorHandler);
 
-export default app;
+    const server = app.listen(config.port);
+
+    process.on("SIGTERM", () => {
+      cleanup();
+      server.close();
+    });
+
+    return app;
+  } catch (error) {
+    console.error("Failed to initialize server:", error);
+    process.exit(1);
+  }
+}
+
+init()
+  .then((app) => console.log("Server initialization completed"))
+  .catch((err) => console.error("Server initialization failed:", err));
+
+export default init;

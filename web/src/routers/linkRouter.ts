@@ -130,6 +130,8 @@ const createRouter = (
         idLocations: ["body"],
         idFields: ["id"],
       }),
+      editChain(),
+      validateRequest,
       fileLinkController.updateNameAndDescription
     )
     .delete(
@@ -142,7 +144,6 @@ const createRouter = (
         idLocations: ["body"],
         idFields: ["id"],
       }),
-      validateRequest,
       deleteChain(),
       validateRequest,
       fileLinkController.delete
@@ -175,6 +176,14 @@ const setPublicityChain = () => [
 ];
 const deleteChain = () => [
   body("id").notEmpty().withMessage("Ссылка на файл должна быть определена!"),
+];
+const editChain = () => [
+  body("name")
+    .isLength({ max: 128 })
+    .withMessage("Длина имени не может быть более 128 символов!"),
+  body("description")
+    .isLength({ max: 1024 })
+    .withMessage("Длина описания не может быть более 128 символов!"),
 ];
 
 export default createRouter;

@@ -2,6 +2,7 @@ import "express-async-errors";
 import { Request, Response, NextFunction, RequestHandler } from "express";
 import IAuthService from "../../../application/src/interfaces/IAuthService";
 import IJwtProvider from "../../../application/src/interfaces/IJwtProvider";
+import config from "../config";
 
 class AuthController {
   constructor(
@@ -44,7 +45,7 @@ class AuthController {
 
     res.cookie("token", token, {
       httpOnly: true,
-      domain: "localhost",
+      domain: config.address,
       secure: false,
       sameSite: "lax",
       path: "/",

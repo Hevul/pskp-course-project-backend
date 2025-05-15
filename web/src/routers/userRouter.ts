@@ -28,13 +28,13 @@ const registerChain = () => [
   body("login")
     .notEmpty()
     .withMessage("Логин не может быть пустым!")
-    .isLength({ min: 3, max: 20 })
-    .withMessage("Длина логина должна быть от 6 до 20 символов!"),
+    .isLength({ min: 6, max: 128 })
+    .withMessage("Длина логина должна быть от 6 до 128 символов!"),
   body("password")
     .notEmpty()
     .withMessage("Пароль не может быть пустым!")
-    .isLength({ min: 6, max: 20 })
-    .withMessage("Длина пароля должна быть от 6 до 20 символов!"),
+    .isLength({ min: 6, max: 128 })
+    .withMessage("Длина пароля должна быть от 6 до 128 символов!"),
 ];
 
 export default createRouter;

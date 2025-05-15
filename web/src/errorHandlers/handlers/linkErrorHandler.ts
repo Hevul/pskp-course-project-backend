@@ -1,6 +1,8 @@
 import LinkAccessDeniedError from "../../../../application/src/errors/LinkAccessDeniedError";
 import CannotAddSelfAsFriendError from "../../../../core/src/errors/CannotAddSelfAsFriendError";
+import DescriptionTooLongError from "../../../../core/src/errors/DescriptionTooLongError";
 import FriendAlreadyAddedError from "../../../../core/src/errors/FriendAlreadyAddedError";
+import NameTooLongError from "../../../../core/src/errors/NameTooLongError";
 import FileLinkNotFoundError from "../../../../infrastructure/src/data/db/fileLink/errors/FileLinkNotFoundError";
 import UserNotFoundError from "../../../../infrastructure/src/data/db/user/errors/UserNotFoundError";
 import createErrorHandler from "../createErrorHandler";
@@ -38,6 +40,20 @@ const errorConfigs: ErrorConfig[] = [
     errorDetails: {
       msg: "Доступ к ссылке запрещён!",
       status: 403,
+    },
+  },
+  {
+    errorName: NameTooLongError.name,
+    errorDetails: {
+      msg: "Длина имени не может быть более 128 символов!",
+      path: "description",
+    },
+  },
+  {
+    errorName: DescriptionTooLongError.name,
+    errorDetails: {
+      msg: "Длина описания не может быть более 128 символов!",
+      path: "description",
     },
   },
 ];

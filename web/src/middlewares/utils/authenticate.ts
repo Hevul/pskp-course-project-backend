@@ -9,11 +9,13 @@ const authenticate = (
   return async (req: Request, res: Response, next: NextFunction) => {
     const token = req.cookies.token;
 
-    if (!token) return res.bad({ code: 401 });
+    if (!token)
+      return res.bad({ code: 401, message: "Необходима аутентификация" });
 
     const payload = jwtProvider.verify(token);
 
-    if (!payload) return res.bad({ code: 401 });
+    if (!payload)
+      return res.bad({ code: 401, message: "Необходима аутентификация" });
 
     const userId = payload.id;
 

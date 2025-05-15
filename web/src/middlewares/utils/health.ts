@@ -5,7 +5,8 @@ const health: RequestHandler = (
   res: Response,
   next: NextFunction
 ) => {
-  res.good();
+  throw new Error();
+  res.good({ message: "I'm alive!" });
 };
 
 export default health;
