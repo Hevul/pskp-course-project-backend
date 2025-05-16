@@ -9,6 +9,7 @@ test/coverage/
 temp/
 uploads/
 sandbox/
+package-lock.json
 
 web/config.json
 web/test.http
