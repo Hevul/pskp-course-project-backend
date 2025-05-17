@@ -39,7 +39,9 @@ async function init() {
         next();
       })
       .use(express.json({ limit: `${config.maxFileSize}mb` }))
-      .use(express.urlencoded({ limit: `${config.maxFileSize}mb`, extended: true }))
+      .use(
+        express.urlencoded({ limit: `${config.maxFileSize}mb`, extended: true })
+      )
       .use(cookieParser())
       .use(extendResponse);
 

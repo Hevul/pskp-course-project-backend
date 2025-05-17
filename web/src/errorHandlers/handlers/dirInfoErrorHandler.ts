@@ -117,7 +117,7 @@ const operations: ErrorConfig[] = [
   {
     errorName: SameDestinationError.name,
     errorDetails: {
-      msg: "Нельзя переместить папку, в ту же папку, где он уже находиться!",
+      msg: "Нельзя переместить или скопировать папку, в ту же папку, где он уже находиться!",
     },
   },
 ];

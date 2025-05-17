@@ -24,8 +24,16 @@ export class EntityService implements IEntityService {
   }): Promise<void> {
     const { fileIds, dirIds, destinationId } = options;
 
-    fileIds.forEach((id) => this._fileService.copy(id, destinationId));
-    dirIds.forEach((id) => this._dirService.copy(id, destinationId));
+    await Promise.all(
+      dirIds.map(async (id) => {
+        await this._dirService.copy(id, destinationId);
+      })
+    );
+    await Promise.all(
+      fileIds.map(async (id) => {
+        await this._fileService.copy(id, destinationId);
+      })
+    );
   }
 
   async moveMultiple(options: {
@@ -42,23 +50,6 @@ export class EntityService implements IEntityService {
     const conflictingFiles: { movedId: string; originalId: string }[] = [];
     const conflictingDirs: { movedId: string; originalId: string }[] = [];
 
-    for (const id of fileIds) {
-      try {
-        await this._fileService.move({
-          id,
-          overwrite,
-          destinationId,
-        });
-      } catch (error) {
-        if (error instanceof MoveCollisionError) {
-          conflictingFiles.push({
-            movedId: id,
-            originalId: error.conflictingId,
-          });
-        } else throw error;
-      }
-    }
-
     for (const id of dirIds) {
       try {
         await this._dirService.move({
@@ -69,6 +60,23 @@ export class EntityService implements IEntityService {
       } catch (error) {
         if (error instanceof MoveCollisionError) {
           conflictingDirs.push({
+            movedId: id,
+            originalId: error.conflictingId,
+          });
+        } else throw error;
+      }
+    }
+
+    for (const id of fileIds) {
+      try {
+        await this._fileService.move({
+          id,
+          overwrite,
+          destinationId,
+        });
+      } catch (error) {
+        if (error instanceof MoveCollisionError) {
+          conflictingFiles.push({
             movedId: id,
             originalId: error.conflictingId,
           });

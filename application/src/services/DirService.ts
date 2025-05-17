@@ -159,6 +159,7 @@ class DirService implements IDirService {
     const sourceDir = await this._dirInfoRepository.get(id);
 
     if (id === destinationId) throw new DirectoryMoveInItSelfError();
+    if (sourceDir.parent === destinationId) throw new SameDestinationError();
 
     try {
       await this._checkNameCollision(

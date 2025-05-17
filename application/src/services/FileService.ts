@@ -113,6 +113,9 @@ export class FileService implements IFileService {
 
   async copy(id: string, parentId?: string): Promise<FileInfo> {
     const sourceFile = await this._fileInfoRepository.get(id);
+
+    if (sourceFile.parent === parentId) throw new SameDestinationError();
+
     let newName = sourceFile.name;
     let attempt = 1;
 

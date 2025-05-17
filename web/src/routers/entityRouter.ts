@@ -1,6 +1,7 @@
 import express, { RequestHandler } from "express";
 import EntityController from "../controllers/EntityController";
 import { createAuthorizeMiddlewareFactory } from "../middlewares/utils/createAuthorizeMiddlewareFactory";
+import entityErrorHandler from "../errorHandlers/handlers/entityErrorHandler";
 
 const createRouter = (
   controller: EntityController,
@@ -51,6 +52,8 @@ const createRouter = (
       }),
       controller.copyMultiple
     );
+
+  router.use(entityErrorHandler);
 
   return router;
 };
