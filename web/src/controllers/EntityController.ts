@@ -39,19 +39,30 @@ class EntityController {
   ): Promise<void> => {
     const { fileIds, dirIds, destinationId, overwrite } = req.body;
 
-    const conflicts = await this._entityService.moveMultiple({
+    const result = await this._entityService.moveMultiple({
       fileIds,
       dirIds,
       destinationId,
       overwrite,
     });
 
-    if (
-      conflicts.conflictingFiles.length > 0 ||
-      conflicts.conflictingDirs.length > 0
-    )
-      res.status(400).json(conflicts);
-    else res.good({ message: "Entities were moved" });
+    const isHasConflicts =
+      result.conflictingDirs.length + result.conflictingFiles.length > 0;
+
+    if (result.success && !isHasConflicts) {
+      res.status(200).json({
+        success: true,
+        message: "All objects were successfully moved",
+        totalFiles: fileIds.length,
+        totalDirs: dirIds.length,
+      });
+      return;
+    }
+
+    res.status(400).json({
+      message: "Some objects could not be moved",
+      ...result,
+    });
   };
 
   copyMultiple = async (

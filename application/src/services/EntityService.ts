@@ -23,8 +23,8 @@ export class EntityService implements IEntityService {
   private _getErrorMessage(error: unknown, type: "file" | "dir"): string {
     if (error instanceof SameDestinationError) {
       return type === "file"
-        ? "Файл с таким именем уже существует в целевой директории"
-        : "Папка с таким именем уже существует в целевой директории";
+        ? "Файл уже существует в целевой директории"
+        : "Папка уже существует в целевой директории";
     }
     if (error instanceof DirectoryMoveInItSelfError)
       return "Невозможно скопировать папку в саму себя";
@@ -56,52 +56,40 @@ export class EntityService implements IEntityService {
     }> = [];
 
     for (const id of dirIds) {
-      try {
-        const sourceDir = await this._dirInfoRepository.get(id);
-
-        if (id === destinationId) throw new DirectoryMoveInItSelfError();
-        if (sourceDir.parent === destinationId)
-          throw new SameDestinationError();
-
-        if (destinationId) {
-          const destinationPath = await this._dirInfoRepository.getPath(
-            destinationId
-          );
-          const currentPath = await this._dirInfoRepository.getPath(id);
-          if (destinationPath.startsWith(`${currentPath}/`)) {
-            throw new DirectoryMoveInChildError();
-          }
-        }
-      } catch (error) {
-        const sourceDir = await this._dirInfoRepository.get(id);
+      const validation = await this._validateMoveOrCopy(
+        id,
+        "dir",
+        destinationId,
+        "copy"
+      );
+      if (validation.error) {
         errors.push({
           id,
-          name: sourceDir.name,
+          name: validation.name,
           type: "dir",
-          error: this._getErrorMessage(error, "dir"),
+          error: validation.error,
         });
       }
     }
 
     for (const id of fileIds) {
-      try {
-        const sourceFile = await this._fileInfoRepository.get(id);
-        if (sourceFile.parent === destinationId)
-          throw new SameDestinationError();
-      } catch (error) {
-        const sourceFile = await this._fileInfoRepository.get(id);
+      const validation = await this._validateMoveOrCopy(
+        id,
+        "file",
+        destinationId,
+        "copy"
+      );
+      if (validation.error) {
         errors.push({
           id,
-          name: sourceFile.name,
+          name: validation.name,
           type: "file",
-          error: this._getErrorMessage(error, "file"),
+          error: validation.error,
         });
       }
     }
 
-    if (errors.length > 0) {
-      return { success: false, errors };
-    }
+    if (errors.length > 0) return { success: false, errors };
 
     try {
       await Promise.all([
@@ -147,52 +135,159 @@ export class EntityService implements IEntityService {
     destinationId?: string;
     overwrite?: boolean;
   }): Promise<{
+    success: boolean;
     conflictingFiles: { movedId: string; originalId: string }[];
     conflictingDirs: { movedId: string; originalId: string }[];
+    errors?: Array<{
+      id: string;
+      name: string;
+      type: "file" | "dir";
+      error: string;
+    }>;
   }> {
     const { fileIds, dirIds, destinationId, overwrite } = options;
-
     const conflictingFiles: { movedId: string; originalId: string }[] = [];
     const conflictingDirs: { movedId: string; originalId: string }[] = [];
+    const errors: Array<{
+      id: string;
+      name: string;
+      type: "file" | "dir";
+      error: string;
+    }> = [];
+
+    for (const id of dirIds) {
+      const validation = await this._validateMoveOrCopy(
+        id,
+        "dir",
+        destinationId,
+        "move"
+      );
+      if (validation.error) {
+        errors.push({
+          id,
+          name: validation.name,
+          type: "dir",
+          error: validation.error,
+        });
+      }
+    }
+
+    for (const id of fileIds) {
+      const validation = await this._validateMoveOrCopy(
+        id,
+        "file",
+        destinationId,
+        "move"
+      );
+      if (validation.error) {
+        errors.push({
+          id,
+          name: validation.name,
+          type: "file",
+          error: validation.error,
+        });
+      }
+    }
+
+    if (errors.length > 0) {
+      return {
+        success: false,
+        conflictingFiles: [],
+        conflictingDirs: [],
+        errors,
+      };
+    }
 
     for (const id of dirIds) {
       try {
-        await this._dirService.move({
-          id,
-          overwrite,
-          destinationId,
-        });
+        await this._dirService.move({ id, overwrite, destinationId });
       } catch (error) {
         if (error instanceof MoveCollisionError) {
           conflictingDirs.push({
             movedId: id,
             originalId: error.conflictingId,
           });
-        } else throw error;
+        } else {
+          const dir = await this._dirInfoRepository.get(id);
+          errors.push({
+            id,
+            name: dir.name,
+            type: "dir",
+            error: this._getErrorMessage(error, "dir"),
+          });
+        }
       }
     }
 
     for (const id of fileIds) {
       try {
-        await this._fileService.move({
-          id,
-          overwrite,
-          destinationId,
-        });
+        await this._fileService.move({ id, overwrite, destinationId });
       } catch (error) {
         if (error instanceof MoveCollisionError) {
           conflictingFiles.push({
             movedId: id,
             originalId: error.conflictingId,
           });
-        } else throw error;
+        } else {
+          const file = await this._fileInfoRepository.get(id);
+          errors.push({
+            id,
+            name: file.name,
+            type: "file",
+            error: this._getErrorMessage(error, "file"),
+          });
+        }
       }
     }
 
     return {
+      success: errors.length === 0,
       conflictingFiles,
       conflictingDirs,
+      errors: errors.length > 0 ? errors : undefined,
     };
+  }
+
+  private async _validateMoveOrCopy(
+    id: string,
+    type: "file" | "dir",
+    destinationId?: string,
+    operation: "move" | "copy" = "move"
+  ): Promise<{ name: string; error?: string }> {
+    try {
+      if (type === "dir") {
+        const dir = await this._dirInfoRepository.get(id);
+
+        if (id === destinationId) throw new DirectoryMoveInItSelfError();
+        if (dir.parent === destinationId) throw new SameDestinationError();
+
+        if (destinationId) {
+          const destinationPath = await this._dirInfoRepository.getPath(
+            destinationId
+          );
+          const currentPath = await this._dirInfoRepository.getPath(id);
+          if (destinationPath.startsWith(`${currentPath}/`)) {
+            throw new DirectoryMoveInChildError();
+          }
+        }
+
+        return { name: dir.name };
+      } else {
+        const file = await this._fileInfoRepository.get(id);
+        if (file.parent === destinationId) throw new SameDestinationError();
+        return { name: file.name };
+      }
+    } catch (error) {
+      const name =
+        type === "dir"
+          ? (await this._dirInfoRepository.get(id)).name
+          : (await this._fileInfoRepository.get(id)).name;
+
+      return {
+        name,
+        error: this._getErrorMessage(error, type),
+      };
+    }
   }
 
   private async _addFileToArchive(
