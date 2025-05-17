@@ -61,13 +61,27 @@ class EntityController {
   ): Promise<void> => {
     const { fileIds, dirIds, destinationId } = req.body;
 
-    await this._entityService.copyMultiple({
+    const result = await this._entityService.copyMultiple({
       fileIds,
       dirIds,
       destinationId,
     });
 
-    res.good({ message: "Objects were copied" });
+    if (result.success) {
+      res.status(200).json({
+        success: true,
+        message: "All objects were successfully copied",
+        totalFiles: fileIds.length,
+        totalDirs: dirIds.length,
+      });
+      return;
+    }
+
+    res.status(400).json({
+      success: false,
+      message: "Some objects could not be copied",
+      ...result.errors,
+    });
   };
 }
 

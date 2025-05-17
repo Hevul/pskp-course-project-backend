@@ -18,5 +18,13 @@ export interface IEntityService {
     fileIds: string[];
     dirIds: string[];
     destinationId?: string;
-  }): Promise<void>;
+  }): Promise<{
+    success: boolean;
+    errors?: Array<{
+      id: string;
+      name: string;
+      type: "file" | "dir";
+      error: string;
+    }>;
+  }>;
 }

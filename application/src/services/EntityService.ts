@@ -7,6 +7,9 @@ import { IEntityService } from "../interfaces/IEntityService";
 import IFileService from "../interfaces/IFileService";
 import IDirService from "../interfaces/IDirService";
 import MoveCollisionError from "../errors/MoveCollisionError";
+import SameDestinationError from "../errors/SameDestinationError";
+import DirectoryMoveInChildError from "../errors/DirectoryMoveInChildError";
+import DirectoryMoveInItSelfError from "../errors/DirectoryMoveInItSelfError";
 
 export class EntityService implements IEntityService {
   constructor(
@@ -17,23 +20,125 @@ export class EntityService implements IEntityService {
     private readonly _dirService: IDirService
   ) {}
 
+  private _getErrorMessage(error: unknown, type: "file" | "dir"): string {
+    if (error instanceof SameDestinationError) {
+      return type === "file"
+        ? "Файл с таким именем уже существует в целевой директории"
+        : "Папка с таким именем уже существует в целевой директории";
+    }
+    if (error instanceof DirectoryMoveInItSelfError)
+      return "Невозможно скопировать папку в саму себя";
+    if (error instanceof DirectoryMoveInChildError)
+      return "Невозможно скопировать папку в её подпапку";
+    if (error instanceof Error) return error.message;
+    return "Неизвестная ошибка при копировании";
+  }
+
   async copyMultiple(options: {
     fileIds: string[];
     dirIds: string[];
     destinationId?: string;
-  }): Promise<void> {
+  }): Promise<{
+    success: boolean;
+    errors?: Array<{
+      id: string;
+      name: string;
+      type: "file" | "dir";
+      error: string;
+    }>;
+  }> {
     const { fileIds, dirIds, destinationId } = options;
+    const errors: Array<{
+      id: string;
+      name: string;
+      type: "file" | "dir";
+      error: string;
+    }> = [];
 
-    await Promise.all(
-      dirIds.map(async (id) => {
-        await this._dirService.copy(id, destinationId);
-      })
-    );
-    await Promise.all(
-      fileIds.map(async (id) => {
-        await this._fileService.copy(id, destinationId);
-      })
-    );
+    for (const id of dirIds) {
+      try {
+        const sourceDir = await this._dirInfoRepository.get(id);
+
+        if (id === destinationId) throw new DirectoryMoveInItSelfError();
+        if (sourceDir.parent === destinationId)
+          throw new SameDestinationError();
+
+        if (destinationId) {
+          const destinationPath = await this._dirInfoRepository.getPath(
+            destinationId
+          );
+          const currentPath = await this._dirInfoRepository.getPath(id);
+          if (destinationPath.startsWith(`${currentPath}/`)) {
+            throw new DirectoryMoveInChildError();
+          }
+        }
+      } catch (error) {
+        const sourceDir = await this._dirInfoRepository.get(id);
+        errors.push({
+          id,
+          name: sourceDir.name,
+          type: "dir",
+          error: this._getErrorMessage(error, "dir"),
+        });
+      }
+    }
+
+    for (const id of fileIds) {
+      try {
+        const sourceFile = await this._fileInfoRepository.get(id);
+        if (sourceFile.parent === destinationId)
+          throw new SameDestinationError();
+      } catch (error) {
+        const sourceFile = await this._fileInfoRepository.get(id);
+        errors.push({
+          id,
+          name: sourceFile.name,
+          type: "file",
+          error: this._getErrorMessage(error, "file"),
+        });
+      }
+    }
+
+    if (errors.length > 0) {
+      return { success: false, errors };
+    }
+
+    try {
+      await Promise.all([
+        ...dirIds.map(async (id) => {
+          try {
+            await this._dirService.copy(id, destinationId);
+          } catch (error) {
+            const sourceDir = await this._dirInfoRepository.get(id);
+            errors.push({
+              id,
+              name: sourceDir.name,
+              type: "dir",
+              error: this._getErrorMessage(error, "dir"),
+            });
+            throw error;
+          }
+        }),
+        ...fileIds.map(async (id) => {
+          try {
+            await this._fileService.copy(id, destinationId);
+          } catch (error) {
+            const sourceFile = await this._fileInfoRepository.get(id);
+            errors.push({
+              id,
+              name: sourceFile.name,
+              type: "file",
+              error: this._getErrorMessage(error, "file"),
+            });
+            throw error;
+          }
+        }),
+      ]);
+
+      return { success: errors.length === 0, errors };
+    } catch {
+      return { success: false, errors };
+    }
   }
 
   async moveMultiple(options: {
