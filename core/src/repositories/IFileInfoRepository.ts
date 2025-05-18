@@ -1,4 +1,4 @@
-import FileInfo from "../entities/FileInfo";
+import { FileInfo } from "../entities/FileInfo";
 
 export default interface IFileInfoRepository {
   add(fileInfo: FileInfo): Promise<FileInfo>;

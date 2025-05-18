@@ -1,4 +1,4 @@
-import FileInfo from "../../../core/src/entities/FileInfo";
+import {FileInfo} from "../../../core/src/entities/FileInfo";
 import FileLink from "../../../core/src/entities/FileLink";
 import { FileLinkFullInfoDTO } from "../dtos/FileLinkFullInfoDTO";
 
